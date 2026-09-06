@@ -1,7 +1,6 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 
@@ -20,7 +19,7 @@ export async function updateMember(memberId: string, formData: FormData) {
   const status = String(formData.get("status") ?? "activo");
   const notes = String(formData.get("notes") ?? "").trim();
 
-  await supabase
+  const { error } = await supabase
     .from("team_members")
     .update({
       full_name: fullName,
@@ -36,15 +35,18 @@ export async function updateMember(memberId: string, formData: FormData) {
     })
     .eq("id", memberId);
 
-  revalidatePath(`/members/${memberId}`);
-  revalidatePath("/dashboard");
+  if (error) {
+    redirect(`/members/${memberId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  redirect(`/members/${memberId}?success=${encodeURIComponent("Cambios guardados exitosamente.")}`);
 }
 
 export async function deleteMember(memberId: string) {
   await requireAdmin();
   const supabase = await createClient();
   await supabase.from("team_members").delete().eq("id", memberId);
-  redirect("/dashboard");
+  redirect(`/dashboard?success=${encodeURIComponent("Integrante eliminado.")}`);
 }
 
 export async function addTrackingEntry(memberId: string, formData: FormData) {
@@ -65,5 +67,5 @@ export async function addTrackingEntry(memberId: string, formData: FormData) {
     created_by: profile.id,
   });
 
-  revalidatePath(`/members/${memberId}`);
+  redirect(`/members/${memberId}?success=${encodeURIComponent("Nota de seguimiento agregada.")}`);
 }

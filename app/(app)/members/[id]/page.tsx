@@ -1,5 +1,8 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import SubmitButton from "@/components/SubmitButton";
+import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
+import SuccessBanner from "@/components/SuccessBanner";
 import { updateMember, deleteMember, addTrackingEntry } from "./actions";
 import { MEMBER_STATUSES, STATUS_LABELS, type TeamMember, type TrackingEntry } from "@/lib/types";
 
@@ -8,10 +11,10 @@ export default async function MemberDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; success?: string }>;
 }) {
   const { id } = await params;
-  const { error } = await searchParams;
+  const { error, success } = await searchParams;
   const supabase = await createClient();
 
   const [{ data: member }, { data: tracking }] = await Promise.all([
@@ -40,6 +43,7 @@ export default async function MemberDetailPage({
         </p>
       </div>
 
+      {success && <SuccessBanner message={success} />}
       {error && (
         <p className="rounded-md bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
           {error}
@@ -164,22 +168,23 @@ export default async function MemberDetailPage({
           </div>
 
           <div className="flex items-center justify-between pt-1">
-            <button
-              type="submit"
-              className="rounded-md bg-nexa-blue px-4 py-2 text-sm font-medium text-white shadow-sm shadow-nexa-blue/30 transition-colors hover:bg-nexa-navy"
+            <SubmitButton
+              variant="primary"
+              pendingLabel="Guardando..."
+              className="rounded-md px-4 py-2 text-sm font-medium"
             >
               Guardar cambios
-            </button>
+            </SubmitButton>
           </div>
         </form>
 
         <form action={deleteWithId} className="mt-3 border-t border-slate-100 pt-3 dark:border-slate-700">
-          <button
-            type="submit"
+          <ConfirmSubmitButton
+            confirmMessage={`¿Eliminar a ${m.full_name} del equipo? Esta acción no se puede deshacer.`}
             className="text-sm text-red-600 hover:underline dark:text-red-400"
           >
             Eliminar integrante
-          </button>
+          </ConfirmSubmitButton>
         </form>
       </section>
 
@@ -201,12 +206,13 @@ export default async function MemberDetailPage({
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
             />
           </div>
-          <button
-            type="submit"
-            className="rounded-md bg-nexa-navy px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-900"
+          <SubmitButton
+            variant="dark"
+            pendingLabel="Agregando..."
+            className="rounded-md px-3 py-1.5 text-sm font-medium"
           >
             + Agregar nota de seguimiento
-          </button>
+          </SubmitButton>
         </form>
 
         <ul className="space-y-3">

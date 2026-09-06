@@ -1,3 +1,4 @@
+import SubmitButton from "@/components/SubmitButton";
 import { createMember } from "./actions";
 import { MEMBER_STATUSES, STATUS_LABELS } from "@/lib/types";
 
@@ -136,12 +137,13 @@ export default async function NewMemberPage({
           />
         </div>
 
-        <button
-          type="submit"
-          className="w-full rounded-md bg-nexa-blue px-3 py-2 text-sm font-medium text-white shadow-sm shadow-nexa-blue/30 transition-colors hover:bg-nexa-navy"
+        <SubmitButton
+          variant="primary"
+          pendingLabel="Registrando..."
+          className="w-full rounded-md px-3 py-2 text-sm font-medium"
         >
           Registrar integrante
-        </button>
+        </SubmitButton>
       </form>
     </div>
   );

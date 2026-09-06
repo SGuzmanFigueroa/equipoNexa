@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "@/components/Badge";
+import SuccessBanner from "@/components/SuccessBanner";
 import { MEMBER_STATUSES, STATUS_LABELS, type Profile, type TeamMember } from "@/lib/types";
 
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; q?: string }>;
+  searchParams: Promise<{ status?: string; q?: string; success?: string }>;
 }) {
-  const { status, q } = await searchParams;
+  const { status, q, success } = await searchParams;
   const supabase = await createClient();
 
   const [{ data: allMembers }, { data: profiles }] = await Promise.all([
@@ -42,6 +43,8 @@ export default async function DashboardPage({
 
   return (
     <div>
+      {success && <SuccessBanner message={success} />}
+
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold text-nexa-navy dark:text-white">Integrantes</h1>

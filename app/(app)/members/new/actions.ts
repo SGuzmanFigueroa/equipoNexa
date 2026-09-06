@@ -43,5 +43,5 @@ export async function createMember(formData: FormData) {
     redirect(`/members/new?error=${encodeURIComponent(error?.message ?? "No se pudo crear el integrante")}`);
   }
 
-  redirect(`/members/${data.id}`);
+  redirect(`/dashboard?success=${encodeURIComponent("Integrante registrado exitosamente.")}`);
 }
