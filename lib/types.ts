@@ -23,10 +23,17 @@ export interface TeamMember {
   full_name: string;
   email: string | null;
   phone: string | null;
+  age: number | null;
+  career: string | null;
+  last_job_role: string | null;
+  linkedin_url: string | null;
+  github_username: string | null;
+  skills: string | null;
+  favorite_area: string | null;
   area: string | null;
   position: string | null;
   collaboration_type: string | null;
-  join_date: string;
+  join_date: string | null;
   end_date: string | null;
   status: MemberStatus;
   notes: string | null;

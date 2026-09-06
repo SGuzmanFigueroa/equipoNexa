@@ -34,7 +34,8 @@ export default async function DashboardPage({
   let query = supabase
     .from("team_members")
     .select("*")
-    .order("join_date", { ascending: false });
+    .order("join_date", { ascending: false, nullsFirst: false })
+    .order("full_name", { ascending: true });
 
   if (status) query = query.eq("status", status);
   if (q) query = query.or(`full_name.ilike.%${q}%,area.ilike.%${q}%,position.ilike.%${q}%`);
@@ -195,13 +196,13 @@ export default async function DashboardPage({
                     </Link>
                   </td>
                   <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">
-                    {m.area ?? "—"}
+                    {m.area ?? m.career ?? "—"}
                   </td>
                   <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">
                     {m.position ?? "—"}
                   </td>
                   <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">
-                    {m.join_date}
+                    {m.join_date ?? "—"}
                   </td>
                   <td className="px-4 py-2.5">
                     <StatusBadge status={m.status} label={STATUS_LABELS[m.status]} />

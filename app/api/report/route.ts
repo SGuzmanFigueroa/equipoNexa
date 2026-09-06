@@ -13,7 +13,10 @@ export async function GET() {
   const supabase = await createClient();
 
   const [{ data: members }, { data: tracking }] = await Promise.all([
-    supabase.from("team_members").select("*").order("join_date", { ascending: false }),
+    supabase
+      .from("team_members")
+      .select("*")
+      .order("join_date", { ascending: false, nullsFirst: false }),
     supabase
       .from("team_member_tracking")
       .select("*, member:team_members(full_name)")
@@ -24,10 +27,17 @@ export async function GET() {
     Nombre: m.full_name,
     Correo: m.email ?? "",
     Teléfono: m.phone ?? "",
-    Área: m.area ?? "",
-    Cargo: m.position ?? "",
+    Edad: m.age ?? "",
+    Carrera: m.career ?? "",
+    "Rol de último trabajo": m.last_job_role ?? "",
+    LinkedIn: m.linkedin_url ?? "",
+    GitHub: m.github_username ?? "",
+    Skills: m.skills ?? "",
+    "Área favorita": m.favorite_area ?? "",
+    "Área en Nexa": m.area ?? "",
+    "Cargo en Nexa": m.position ?? "",
     "Tipo de colaboración": m.collaboration_type ?? "",
-    "Fecha de ingreso": m.join_date,
+    "Fecha de ingreso": m.join_date ?? "",
     "Fecha de salida": m.end_date ?? "",
     Estado: STATUS_LABELS[m.status as MemberStatus] ?? m.status,
     Notas: m.notes ?? "",

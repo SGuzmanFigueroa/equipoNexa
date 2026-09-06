@@ -70,9 +70,90 @@ export default async function NewMemberPage({
           </div>
         </div>
 
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Edad
+            </label>
+            <input
+              name="age"
+              type="number"
+              min={0}
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Carrera
+            </label>
+            <input
+              name="career"
+              placeholder="Ej: Ingeniería de Sistemas"
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Rol de último trabajo
+            </label>
+            <input
+              name="last_job_role"
+              placeholder="Si aplica"
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            />
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Área</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+              LinkedIn
+            </label>
+            <input
+              name="linkedin_url"
+              type="url"
+              placeholder="https://www.linkedin.com/in/..."
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+              GitHub (usuario)
+            </label>
+            <input
+              name="github_username"
+              placeholder="usuario"
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Skills
+            </label>
+            <input
+              name="skills"
+              placeholder="Ej: Python, SQL, Docker"
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Área favorita (de su carrera)
+            </label>
+            <input
+              name="favorite_area"
+              placeholder="Ej: QA Automation"
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 border-t border-slate-100 pt-4 dark:border-slate-700 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Área en Nexa</label>
             <input
               name="area"
               placeholder="Ej: Ingeniería de Sistemas"
@@ -80,7 +161,7 @@ export default async function NewMemberPage({
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Cargo</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Cargo en Nexa</label>
             <input
               name="position"
               placeholder="Ej: Desarrollador Backend"
@@ -107,7 +188,6 @@ export default async function NewMemberPage({
             <input
               name="join_date"
               type="date"
-              required
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
             />
           </div>

@@ -85,9 +85,91 @@ export default async function MemberDetailPage({
             </div>
           </div>
 
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                Edad
+              </label>
+              <input
+                name="age"
+                type="number"
+                min={0}
+                defaultValue={m.age ?? ""}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                Carrera
+              </label>
+              <input
+                name="career"
+                defaultValue={m.career ?? ""}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                Rol de último trabajo
+              </label>
+              <input
+                name="last_job_role"
+                defaultValue={m.last_job_role ?? ""}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+              />
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Área</label>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                LinkedIn
+              </label>
+              <input
+                name="linkedin_url"
+                type="url"
+                defaultValue={m.linkedin_url ?? ""}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                GitHub (usuario)
+              </label>
+              <input
+                name="github_username"
+                defaultValue={m.github_username ?? ""}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                Skills
+              </label>
+              <input
+                name="skills"
+                defaultValue={m.skills ?? ""}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                Área favorita (de su carrera)
+              </label>
+              <input
+                name="favorite_area"
+                defaultValue={m.favorite_area ?? ""}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 border-t border-slate-100 pt-4 dark:border-slate-700 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Área en Nexa</label>
               <input
                 name="area"
                 defaultValue={m.area ?? ""}
@@ -95,7 +177,7 @@ export default async function MemberDetailPage({
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Cargo</label>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Cargo en Nexa</label>
               <input
                 name="position"
                 defaultValue={m.position ?? ""}
@@ -139,8 +221,7 @@ export default async function MemberDetailPage({
               <input
                 name="join_date"
                 type="date"
-                defaultValue={m.join_date}
-                required
+                defaultValue={m.join_date ?? ""}
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
               />
             </div>
