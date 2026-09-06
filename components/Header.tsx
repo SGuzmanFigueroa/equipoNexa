@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signOut } from "@/app/login/actions";
 import type { Profile } from "@/lib/types";
+import ThemeToggle from "./ThemeToggle";
 
 export default function Header({ profile }: { profile: Profile }) {
   return (
@@ -16,10 +17,11 @@ export default function Header({ profile }: { profile: Profile }) {
           </div>
         </Link>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1">
           <span className="hidden text-sm text-blue-100/80 sm:inline">
             {profile.full_name ?? profile.email}
           </span>
+          <ThemeToggle />
           <form action={signOut}>
             <button
               type="submit"
