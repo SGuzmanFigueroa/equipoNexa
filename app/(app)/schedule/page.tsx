@@ -1,14 +1,22 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
-import { DAY_LABELS, HOURS, slotKey, type TeamMember } from "@/lib/types";
+import {
+  AVAILABILITY_COLORS,
+  AVAILABILITY_LABELS,
+  DAY_LABELS,
+  HOURS,
+  slotKey,
+  type TeamMember,
+} from "@/lib/types";
 
-function intensityClass(ratio: number) {
-  if (ratio === 0) return "bg-white dark:bg-slate-900";
-  if (ratio === 1) return "bg-emerald-500 text-white dark:bg-emerald-500";
-  if (ratio >= 0.6) return "bg-emerald-300 dark:bg-emerald-700/70 dark:text-white";
-  if (ratio >= 0.3) return "bg-amber-200 dark:bg-amber-800/60 dark:text-white";
-  return "bg-red-100 dark:bg-red-950/40 dark:text-red-200";
+// Mismo semáforo que la grilla individual (verde/amarillo/rojo), aplicado a
+// la fracción del grupo seleccionado que marcó "Libre" en esa hora — no un
+// degradado de 5 pasos, exactamente estos 3 colores, siempre.
+function groupStatusClass(ratio: number) {
+  if (ratio >= 0.5) return AVAILABILITY_COLORS.libre;
+  if (ratio > 0) return AVAILABILITY_COLORS.tentativo;
+  return AVAILABILITY_COLORS.ocupado;
 }
 
 export default async function SchedulePage({
@@ -170,23 +178,20 @@ export default async function SchedulePage({
           <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800">
             <span className="font-medium text-slate-500 dark:text-slate-400">Leyenda:</span>
             <span className="flex items-center gap-1.5">
-              <span className="h-3 w-3 rounded-sm bg-emerald-500" /> Todos libres
+              <span className={`h-3 w-3 rounded-sm ${AVAILABILITY_COLORS.libre.split(" ")[0]}`} />{" "}
+              {AVAILABILITY_LABELS.libre} — la mitad o más del grupo libre
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-3 w-3 rounded-sm bg-emerald-300 dark:bg-emerald-700/70" /> La
-              mayoría libre
+              <span
+                className={`h-3 w-3 rounded-sm ${AVAILABILITY_COLORS.tentativo.split(" ")[0]}`}
+              />{" "}
+              {AVAILABILITY_LABELS.tentativo} — algunos libres, menos de la mitad
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-3 w-3 rounded-sm bg-amber-200 dark:bg-amber-800/60" /> Parte del
-              grupo
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-3 w-3 rounded-sm bg-red-100 dark:bg-red-950/40" /> Muy pocos
-              libres
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-3 w-3 rounded-sm border border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-900" />{" "}
-              Nadie marcó libre esa hora
+              <span
+                className={`h-3 w-3 rounded-sm ${AVAILABILITY_COLORS.ocupado.split(" ")[0]}`}
+              />{" "}
+              {AVAILABILITY_LABELS.ocupado} — nadie del grupo marcó libre
             </span>
           </div>
 
@@ -238,7 +243,7 @@ export default async function SchedulePage({
                           }`}
                         >
                           <div
-                            className={`m-0.5 flex h-[calc(100%-4px)] items-center justify-center rounded-md ${intensityClass(ratio)}`}
+                            className={`m-0.5 flex h-[calc(100%-4px)] items-center justify-center rounded-md font-medium text-nexa-navy dark:text-white ${groupStatusClass(ratio)}`}
                           >
                             {count > 0 ? `${count}/${selectedIds.length}` : ""}
                           </div>
