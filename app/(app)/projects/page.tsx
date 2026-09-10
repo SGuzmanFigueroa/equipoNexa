@@ -1,8 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 import SubmitButton from "@/components/SubmitButton";
+import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import SuccessBanner from "@/components/SuccessBanner";
-import { createProject } from "./actions";
+import { createProject, deleteProject } from "./actions";
 import type { Project } from "@/lib/types";
 
 export default async function ProjectsPage({
@@ -102,9 +103,20 @@ export default async function ProjectsPage({
                 )}
               </div>
             </div>
-            <span className="text-xs text-slate-400">
-              {counts.get(p.id) ?? 0} integrante{(counts.get(p.id) ?? 0) === 1 ? "" : "s"}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-slate-400">
+                {counts.get(p.id) ?? 0} integrante{(counts.get(p.id) ?? 0) === 1 ? "" : "s"}
+              </span>
+              <form action={deleteProject}>
+                <input type="hidden" name="id" value={p.id} />
+                <ConfirmSubmitButton
+                  confirmMessage={`¿Eliminar el proyecto "${p.name}"? Esto también borra sus asignaciones de integrantes y, como esta tabla es compartida, cualquier ticket del Gestor de Tickets que pertenezca a este proyecto. No se puede deshacer.`}
+                  className="text-xs text-red-500 hover:underline"
+                >
+                  Eliminar
+                </ConfirmSubmitButton>
+              </form>
+            </div>
           </div>
         ))}
         {projects?.length === 0 && (

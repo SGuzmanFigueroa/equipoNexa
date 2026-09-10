@@ -41,3 +41,17 @@ export async function createProject(formData: FormData) {
 
   redirect(`/projects?success=${encodeURIComponent("Proyecto agregado.")}`);
 }
+
+export async function deleteProject(formData: FormData) {
+  await requireAdmin();
+  const supabase = await createClient();
+  const id = String(formData.get("id") ?? "");
+
+  const { error } = await supabase.from("projects").delete().eq("id", id);
+
+  if (error) {
+    redirect(`/projects?error=${encodeURIComponent(error.message)}`);
+  }
+
+  redirect(`/projects?success=${encodeURIComponent("Proyecto eliminado.")}`);
+}

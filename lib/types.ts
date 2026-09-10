@@ -61,6 +61,35 @@ export interface Project {
   description: string | null;
 }
 
+// Fixed vocabularies for the two free-text fields people kept phrasing
+// differently ("Ing. Sistemas" vs "Ingeniería de Sistemas") — a combo box
+// keeps names consistent everywhere they're shown (dashboard, /schedule
+// detail, reports). Whoever's editing still sees their current value even
+// if it isn't in the list (appended as an extra option), so switching to a
+// combo box never silently discards existing data.
+export const CAREER_OPTIONS = [
+  "Ingeniería de Sistemas",
+  "Ingeniería de Software",
+  "Ingeniería Informática",
+  "Ingeniería Industrial",
+  "Ciencias de la Computación",
+  "Administración y Marketing",
+  "Administración de Empresas",
+  "Diseño Gráfico",
+  "Marketing Digital",
+];
+
+export const ROLE_OPTIONS = [
+  "QA / Testing",
+  "Backend Developer",
+  "Frontend Developer",
+  "Fullstack Developer",
+  "Diseño UI/UX",
+  "Marketing",
+  "Data / IA",
+  "Project Manager",
+];
+
 // Weekly recurring availability grid: day_of_week 0=Lunes .. 6=Domingo,
 // hour = slot start (7..22, 1h blocks).
 export const DAY_LABELS = [

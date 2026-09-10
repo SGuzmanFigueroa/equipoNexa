@@ -8,7 +8,9 @@ import SuccessBanner from "@/components/SuccessBanner";
 import AvailabilityGrid from "@/components/AvailabilityGrid";
 import { updateMember, deleteMember, addTrackingEntry, saveAvailability } from "./actions";
 import {
+  CAREER_OPTIONS,
   MEMBER_STATUSES,
+  ROLE_OPTIONS,
   STATUS_LABELS,
   encodeSlot,
   type TeamMember,
@@ -131,11 +133,21 @@ export default async function MemberDetailPage({
               <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
                 Carrera
               </label>
-              <input
+              <select
                 name="career"
                 defaultValue={m.career ?? ""}
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-              />
+              >
+                <option value="">Sin especificar</option>
+                {CAREER_OPTIONS.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+                {m.career && !CAREER_OPTIONS.includes(m.career) && (
+                  <option value={m.career}>{m.career}</option>
+                )}
+              </select>
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -243,11 +255,21 @@ export default async function MemberDetailPage({
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Cargo en Nexa</label>
-              <input
+              <select
                 name="position"
                 defaultValue={m.position ?? ""}
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-              />
+              >
+                <option value="">Sin especificar</option>
+                {ROLE_OPTIONS.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+                {m.position && !ROLE_OPTIONS.includes(m.position) && (
+                  <option value={m.position}>{m.position}</option>
+                )}
+              </select>
             </div>
           </div>
 

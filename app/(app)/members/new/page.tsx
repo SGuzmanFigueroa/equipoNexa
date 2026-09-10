@@ -3,7 +3,7 @@ import SubmitButton from "@/components/SubmitButton";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 import { createMember } from "./actions";
-import { MEMBER_STATUSES, STATUS_LABELS, type Project } from "@/lib/types";
+import { CAREER_OPTIONS, MEMBER_STATUSES, ROLE_OPTIONS, STATUS_LABELS, type Project } from "@/lib/types";
 
 export default async function NewMemberPage({
   searchParams,
@@ -95,11 +95,18 @@ export default async function NewMemberPage({
             <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
               Carrera
             </label>
-            <input
+            <select
               name="career"
-              placeholder="Ej: Ingeniería de Sistemas"
+              defaultValue=""
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-            />
+            >
+              <option value="">Sin especificar</option>
+              {CAREER_OPTIONS.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -202,11 +209,18 @@ export default async function NewMemberPage({
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Cargo en Nexa</label>
-            <input
+            <select
               name="position"
-              placeholder="Ej: Desarrollador Backend"
+              defaultValue=""
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-            />
+            >
+              <option value="">Sin especificar</option>
+              {ROLE_OPTIONS.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
