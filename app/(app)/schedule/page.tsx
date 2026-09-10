@@ -41,7 +41,7 @@ export default async function SchedulePage({
     const [{ data: availability }, { data: selectedMembers }] = await Promise.all([
       supabase
         .from("team_member_availability")
-        .select("member_id, day_of_week, hour")
+        .select("member_id, day_of_week, hour, status")
         .in("member_id", selectedIds),
       supabase.from("team_members").select("full_name").in("id", selectedIds),
     ]);
@@ -49,6 +49,7 @@ export default async function SchedulePage({
     selectedNames = (selectedMembers ?? []).map((m) => m.full_name);
     counts = new Map();
     for (const a of availability ?? []) {
+      if (a.status !== "libre") continue; // "tentativo"/"ocupado" no cuentan como libres.
       const key = slotKey(a.day_of_week, a.hour);
       counts.set(key, (counts.get(key) ?? 0) + 1);
     }
@@ -134,6 +135,29 @@ export default async function SchedulePage({
             persona{selectedIds.length === 1 ? "" : "s"})
           </p>
 
+          <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-800">
+            <span className="font-medium text-slate-500 dark:text-slate-400">Leyenda:</span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded-sm bg-emerald-500" /> Todos libres
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded-sm bg-emerald-300 dark:bg-emerald-700/70" /> La
+              mayoría libre
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded-sm bg-amber-200 dark:bg-amber-800/60" /> Parte del
+              grupo
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded-sm bg-red-100 dark:bg-red-950/40" /> Muy pocos
+              libres
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded-sm border border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-900" />{" "}
+              Nadie marcó libre esa hora
+            </span>
+          </div>
+
           <div className="overflow-x-auto rounded-lg border border-slate-200 shadow-sm dark:border-slate-700">
             <table className="w-full min-w-[640px] border-collapse text-xs">
               <thead>
@@ -175,8 +199,8 @@ export default async function SchedulePage({
           </div>
 
           <p className="mt-3 text-xs text-slate-400">
-            Verde intenso = todos libres. Ámbar/rojo = solo parte del grupo. En blanco = nadie
-            marcó ese horario como libre.
+            Solo cuenta lo que cada quien marcó como &quot;Libre&quot; en su propia grilla —
+            &quot;Probablemente ocupado&quot; y &quot;Ocupado&quot; no suman aquí.
           </p>
         </>
       )}

@@ -4,7 +4,7 @@ import { requireProfile } from "@/lib/auth";
 import AvailabilityGrid from "@/components/AvailabilityGrid";
 import { StatusBadge } from "@/components/Badge";
 import { saveMyAvailability } from "./actions";
-import { STATUS_LABELS, slotKey, type TeamMember } from "@/lib/types";
+import { STATUS_LABELS, encodeSlot, type TeamMember, type AvailabilityStatus } from "@/lib/types";
 
 export default async function MePage() {
   const profile = await requireProfile();
@@ -35,13 +35,18 @@ export default async function MePage() {
   const m = member as TeamMember;
   const [{ data: memberProjects }, { data: availability }] = await Promise.all([
     supabase.from("team_member_projects").select("project:projects(name, code)").eq("member_id", m.id),
-    supabase.from("team_member_availability").select("day_of_week, hour").eq("member_id", m.id),
+    supabase
+      .from("team_member_availability")
+      .select("day_of_week, hour, status")
+      .eq("member_id", m.id),
   ]);
 
   const projectNames = (memberProjects ?? [])
     .map((mp) => (mp.project as unknown as { name: string } | null)?.name)
     .filter((n): n is string => Boolean(n));
-  const initialSlots = (availability ?? []).map((a) => slotKey(a.day_of_week, a.hour));
+  const initialSlots = (availability ?? []).map((a) =>
+    encodeSlot(a.day_of_week, a.hour, a.status as AvailabilityStatus),
+  );
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -84,8 +89,8 @@ export default async function MePage() {
           Tu disponibilidad horaria
         </h2>
         <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
-          Marca las horas en las que sueles estar libre, de lunes a domingo. El admin la usa en
-          Horarios para cruzarla con la del resto del equipo.
+          Marca cómo sueles estar, de lunes a domingo: libre, probablemente ocupado, u ocupado. El
+          admin la usa en Horarios para cruzarla con la del resto del equipo.
         </p>
         <AvailabilityGrid initialSlots={initialSlots} onSave={saveMyAvailability} />
       </section>

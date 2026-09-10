@@ -10,11 +10,12 @@ import { updateMember, deleteMember, addTrackingEntry, saveAvailability } from "
 import {
   MEMBER_STATUSES,
   STATUS_LABELS,
-  slotKey,
+  encodeSlot,
   type TeamMember,
   type TrackingEntry,
   type Project,
   type Profile,
+  type AvailabilityStatus,
 } from "@/lib/types";
 
 export default async function MemberDetailPage({
@@ -46,7 +47,7 @@ export default async function MemberDetailPage({
       .order("created_at", { ascending: false }),
     supabase.from("projects").select("id, name, code").order("name"),
     supabase.from("team_member_projects").select("project_id").eq("member_id", id),
-    supabase.from("team_member_availability").select("day_of_week, hour").eq("member_id", id),
+    supabase.from("team_member_availability").select("day_of_week, hour, status").eq("member_id", id),
     supabase.from("profiles").select("id, email, full_name").order("email"),
   ]);
 
@@ -54,7 +55,9 @@ export default async function MemberDetailPage({
 
   const m = member as TeamMember;
   const selectedProjectIds = new Set((memberProjects ?? []).map((mp) => mp.project_id));
-  const initialSlots = (availability ?? []).map((a) => slotKey(a.day_of_week, a.hour));
+  const initialSlots = (availability ?? []).map((a) =>
+    encodeSlot(a.day_of_week, a.hour, a.status as AvailabilityStatus),
+  );
   const updateWithId = updateMember.bind(null, id);
   const deleteWithId = deleteMember.bind(null, id);
   const addTrackingWithId = addTrackingEntry.bind(null, id);
@@ -412,7 +415,8 @@ export default async function MemberDetailPage({
           Disponibilidad horaria
         </h2>
         <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
-          Marca las horas en las que {m.full_name.split(" ")[0]} suele estar libre. Se usa en{" "}
+          Marca cómo suele estar {m.full_name.split(" ")[0]} cada hora: libre, probablemente
+          ocupado, u ocupado. Se usa en{" "}
           <Link href="/schedule" className="text-nexa-blue hover:underline">
             Horarios
           </Link>{" "}

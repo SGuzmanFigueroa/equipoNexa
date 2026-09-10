@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
+import { decodeSlot } from "@/lib/types";
 
 export async function updateMember(memberId: string, formData: FormData) {
   await requireAdmin();
@@ -101,14 +102,9 @@ export async function saveAvailability(memberId: string, slots: string[]) {
   await supabase.from("team_member_availability").delete().eq("member_id", memberId);
 
   const rows = slots
-    .map((slot) => {
-      const [dayStr, hourStr] = slot.split("-");
-      const day_of_week = Number(dayStr);
-      const hour = Number(hourStr);
-      if (Number.isNaN(day_of_week) || Number.isNaN(hour)) return null;
-      return { member_id: memberId, day_of_week, hour };
-    })
-    .filter((r): r is { member_id: string; day_of_week: number; hour: number } => r !== null);
+    .map(decodeSlot)
+    .filter((s): s is NonNullable<typeof s> => s !== null)
+    .map((s) => ({ member_id: memberId, ...s }));
 
   if (rows.length > 0) {
     await supabase.from("team_member_availability").insert(rows);

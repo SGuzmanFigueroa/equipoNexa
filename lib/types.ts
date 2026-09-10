@@ -77,3 +77,38 @@ export const HOURS: number[] = Array.from({ length: 16 }, (_, i) => i + 7);
 export function slotKey(dayOfWeek: number, hour: number) {
   return `${dayOfWeek}-${hour}`;
 }
+
+export type AvailabilityStatus = "libre" | "tentativo" | "ocupado";
+
+export const AVAILABILITY_STATUSES: AvailabilityStatus[] = ["libre", "tentativo", "ocupado"];
+
+export const AVAILABILITY_LABELS: Record<AvailabilityStatus, string> = {
+  libre: "Libre",
+  tentativo: "Probablemente ocupado",
+  ocupado: "Ocupado",
+};
+
+export const AVAILABILITY_COLORS: Record<AvailabilityStatus, string> = {
+  libre: "bg-emerald-400 hover:bg-emerald-500 dark:bg-emerald-500",
+  tentativo: "bg-amber-300 hover:bg-amber-400 dark:bg-amber-500",
+  ocupado: "bg-red-400 hover:bg-red-500 dark:bg-red-500",
+};
+
+// "day-hour:status" — the wire format AvailabilityGrid sends to the save
+// action, since a plain string array is the simplest thing a client
+// component can hand a server action without extra plumbing.
+export function encodeSlot(dayOfWeek: number, hour: number, status: AvailabilityStatus) {
+  return `${dayOfWeek}-${hour}:${status}`;
+}
+
+export function decodeSlot(
+  slot: string,
+): { day_of_week: number; hour: number; status: AvailabilityStatus } | null {
+  const [dayHour, status] = slot.split(":");
+  const [dayStr, hourStr] = (dayHour ?? "").split("-");
+  const day_of_week = Number(dayStr);
+  const hour = Number(hourStr);
+  if (Number.isNaN(day_of_week) || Number.isNaN(hour)) return null;
+  if (status !== "libre" && status !== "tentativo" && status !== "ocupado") return null;
+  return { day_of_week, hour, status };
+}
