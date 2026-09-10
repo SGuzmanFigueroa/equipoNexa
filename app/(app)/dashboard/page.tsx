@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth";
 import { StatusBadge } from "@/components/Badge";
 import SuccessBanner from "@/components/SuccessBanner";
 import { MEMBER_STATUSES, STATUS_LABELS, type Profile, type TeamMember } from "@/lib/types";
@@ -9,6 +10,7 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ status?: string; q?: string; success?: string }>;
 }) {
+  await requireAdmin();
   const { status, q, success } = await searchParams;
   const supabase = await createClient();
 

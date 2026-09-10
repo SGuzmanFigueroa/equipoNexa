@@ -25,6 +25,7 @@ export async function updateMember(memberId: string, formData: FormData) {
   const endDate = String(formData.get("end_date") ?? "").trim();
   const status = String(formData.get("status") ?? "activo");
   const notes = String(formData.get("notes") ?? "").trim();
+  const profileId = String(formData.get("profile_id") ?? "").trim();
   const projectIds = formData.getAll("project_ids").map(String).filter(Boolean);
 
   const { error } = await supabase
@@ -47,6 +48,7 @@ export async function updateMember(memberId: string, formData: FormData) {
       end_date: endDate || null,
       status,
       notes: notes || null,
+      profile_id: profileId || null,
     })
     .eq("id", memberId);
 

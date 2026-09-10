@@ -19,9 +19,14 @@ export async function getCurrentProfile(): Promise<Profile | null> {
   return profile as Profile | null;
 }
 
-export async function requireAdmin(): Promise<Profile> {
+export async function requireProfile(): Promise<Profile> {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
-  if (profile.role !== "admin") redirect("/login?error=Tu+cuenta+no+tiene+acceso+de+admin");
+  return profile;
+}
+
+export async function requireAdmin(): Promise<Profile> {
+  const profile = await requireProfile();
+  if (profile.role !== "admin") redirect("/me");
   return profile;
 }

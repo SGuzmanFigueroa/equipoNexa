@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth";
 import SubmitButton from "@/components/SubmitButton";
 import SuccessBanner from "@/components/SuccessBanner";
 import { createProject } from "./actions";
@@ -9,6 +10,7 @@ export default async function ProjectsPage({
 }: {
   searchParams: Promise<{ error?: string; success?: string }>;
 }) {
+  await requireAdmin();
   const { error, success } = await searchParams;
   const supabase = await createClient();
 

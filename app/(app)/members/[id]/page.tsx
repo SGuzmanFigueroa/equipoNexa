@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth";
 import SubmitButton from "@/components/SubmitButton";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import SuccessBanner from "@/components/SuccessBanner";
@@ -13,6 +14,7 @@ import {
   type TeamMember,
   type TrackingEntry,
   type Project,
+  type Profile,
 } from "@/lib/types";
 
 export default async function MemberDetailPage({
@@ -22,23 +24,31 @@ export default async function MemberDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ error?: string; success?: string }>;
 }) {
+  await requireAdmin();
   const { id } = await params;
   const { error, success } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: member }, { data: tracking }, { data: projects }, { data: memberProjects }, { data: availability }] =
-    await Promise.all([
-      supabase.from("team_members").select("*").eq("id", id).single(),
-      supabase
-        .from("team_member_tracking")
-        .select("*, author:profiles(id, full_name, email)")
-        .eq("member_id", id)
-        .order("entry_date", { ascending: false })
-        .order("created_at", { ascending: false }),
-      supabase.from("projects").select("id, name, code").order("name"),
-      supabase.from("team_member_projects").select("project_id").eq("member_id", id),
-      supabase.from("team_member_availability").select("day_of_week, hour").eq("member_id", id),
-    ]);
+  const [
+    { data: member },
+    { data: tracking },
+    { data: projects },
+    { data: memberProjects },
+    { data: availability },
+    { data: allProfiles },
+  ] = await Promise.all([
+    supabase.from("team_members").select("*").eq("id", id).single(),
+    supabase
+      .from("team_member_tracking")
+      .select("*, author:profiles(id, full_name, email)")
+      .eq("member_id", id)
+      .order("entry_date", { ascending: false })
+      .order("created_at", { ascending: false }),
+    supabase.from("projects").select("id, name, code").order("name"),
+    supabase.from("team_member_projects").select("project_id").eq("member_id", id),
+    supabase.from("team_member_availability").select("day_of_week, hour").eq("member_id", id),
+    supabase.from("profiles").select("id, email, full_name").order("email"),
+  ]);
 
   if (!member) notFound();
 
@@ -265,6 +275,29 @@ export default async function MemberDetailPage({
             </div>
           </div>
 
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Cuenta vinculada (login)
+            </label>
+            <select
+              name="profile_id"
+              defaultValue={m.profile_id ?? ""}
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            >
+              <option value="">Sin vincular</option>
+              {(allProfiles as Pick<Profile, "id" | "email" | "full_name">[] | null)?.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.full_name ?? p.email} ({p.email})
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-slate-400">
+              La cuenta que quede vinculada aquí puede entrar a Equipo Nexa y ver su estado y
+              subir su propio horario en <code>/me</code> — todo lo demás de esta ficha sigue
+              siendo solo tuyo para editar.
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -371,7 +404,10 @@ export default async function MemberDetailPage({
         </ul>
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+      <section
+        id="disponibilidad"
+        className="scroll-mt-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800"
+      >
         <h2 className="mb-1 text-sm font-semibold text-nexa-navy dark:text-white">
           Disponibilidad horaria
         </h2>

@@ -23,6 +23,7 @@ export interface TeamMember {
   full_name: string;
   email: string | null;
   phone: string | null;
+  profile_id: string | null;
   age: number | null;
   career: string | null;
   last_job_role: string | null;

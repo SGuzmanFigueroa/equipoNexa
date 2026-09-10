@@ -8,7 +8,7 @@ export default function Header({ profile }: { profile: Profile }) {
   return (
     <header className="bg-nexa-navy px-4 py-3 md:px-8">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-y-2">
-        <Link href="/dashboard" className="flex items-center gap-2">
+        <Link href={profile.role === "admin" ? "/dashboard" : "/me"} className="flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-nexa-sky to-nexa-blue text-sm font-bold text-white">
             N
           </span>
@@ -19,9 +19,15 @@ export default function Header({ profile }: { profile: Profile }) {
         </Link>
 
         <nav className="flex items-center gap-1">
-          <NavLink href="/dashboard">Integrantes</NavLink>
-          <NavLink href="/projects">Proyectos</NavLink>
-          <NavLink href="/schedule">Horarios</NavLink>
+          {profile.role === "admin" ? (
+            <>
+              <NavLink href="/dashboard">Integrantes</NavLink>
+              <NavLink href="/projects">Proyectos</NavLink>
+              <NavLink href="/schedule">Horarios</NavLink>
+            </>
+          ) : (
+            <NavLink href="/me">Mi horario</NavLink>
+          )}
         </nav>
 
         <div className="flex items-center gap-1">

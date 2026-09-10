@@ -1,8 +1,8 @@
-import { requireAdmin } from "@/lib/auth";
+import { requireProfile } from "@/lib/auth";
 import Header from "@/components/Header";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const profile = await requireAdmin();
+  const profile = await requireProfile();
 
   return (
     <div className="min-h-screen bg-nexa-gray dark:bg-slate-900">

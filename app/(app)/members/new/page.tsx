@@ -1,6 +1,7 @@
 import Link from "next/link";
 import SubmitButton from "@/components/SubmitButton";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth";
 import { createMember } from "./actions";
 import { MEMBER_STATUSES, STATUS_LABELS, type Project } from "@/lib/types";
 
@@ -9,6 +10,7 @@ export default async function NewMemberPage({
 }: {
   searchParams: Promise<{ error?: string; full_name?: string; email?: string }>;
 }) {
+  await requireAdmin();
   const { error, full_name, email } = await searchParams;
   const supabase = await createClient();
   const { data: projects } = await supabase
