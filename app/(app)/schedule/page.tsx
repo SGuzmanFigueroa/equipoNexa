@@ -29,6 +29,8 @@ export default async function SchedulePage({
     .select("id, full_name")
     .order("full_name");
 
+  const todayIdx = (new Date().getDay() + 6) % 7; // 0=Lunes..6=Domingo
+
   const allIds = (allMembers ?? []).map((m) => m.id);
   // No filter submitted yet -> "horario general": everyone included by default.
   // Filter submitted -> "horario filtrado": exactly whoever is checked (can be a subset, or none).
@@ -158,25 +160,38 @@ export default async function SchedulePage({
             </span>
           </div>
 
-          <div className="overflow-x-auto rounded-lg border border-slate-200 shadow-sm dark:border-slate-700">
-            <table className="w-full min-w-[640px] border-collapse text-xs">
+          <div className="overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-2 shadow-sm dark:border-slate-700 dark:bg-slate-950/40">
+            <table className="w-full min-w-[680px] border-separate border-spacing-0 text-xs">
               <thead>
                 <tr>
-                  <th className="w-16 border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-800"></th>
-                  {DAY_LABELS.map((d) => (
-                    <th
-                      key={d}
-                      className="border border-slate-200 bg-nexa-light/50 p-1 font-medium text-nexa-navy/80 dark:border-slate-700 dark:bg-slate-700/40 dark:text-slate-300"
-                    >
-                      {d.slice(0, 3)}
+                  <th className="w-16"></th>
+                  {DAY_LABELS.map((d, i) => (
+                    <th key={d} className="pb-2 text-center">
+                      <div
+                        className={`mx-auto flex w-14 flex-col items-center rounded-lg px-1 py-1 ${
+                          todayIdx === i
+                            ? "bg-amber-400 text-nexa-navy dark:bg-amber-500 dark:text-slate-900"
+                            : "text-slate-500 dark:text-slate-400"
+                        }`}
+                      >
+                        <span className="text-[11px] font-medium uppercase tracking-wide">
+                          {d.slice(0, 3)}
+                        </span>
+                      </div>
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {HOURS.map((h) => (
+                {HOURS.map((h, rowIdx) => (
                   <tr key={h}>
-                    <td className="border border-slate-200 bg-nexa-light/50 p-1 text-center font-medium text-nexa-navy/80 dark:border-slate-700 dark:bg-slate-700/40 dark:text-slate-300">
+                    <td
+                      className={`w-16 pr-2 text-right align-top text-[11px] font-medium text-amber-600 dark:text-amber-400 ${
+                        rowIdx === 0
+                          ? ""
+                          : "border-t border-dashed border-slate-300 dark:border-slate-700"
+                      }`}
+                    >
                       {String(h).padStart(2, "0")}:00
                     </td>
                     {DAY_LABELS.map((_, dayIdx) => {
@@ -186,9 +201,17 @@ export default async function SchedulePage({
                       return (
                         <td
                           key={key}
-                          className={`h-7 w-14 border border-slate-200 text-center dark:border-slate-700 ${intensityClass(ratio)}`}
+                          className={`h-8 w-14 border-l border-slate-200 text-center dark:border-slate-700 ${
+                            rowIdx === 0
+                              ? ""
+                              : "border-t border-dashed border-slate-300 dark:border-slate-700"
+                          }`}
                         >
-                          {count > 0 ? `${count}/${selectedIds.length}` : ""}
+                          <div
+                            className={`m-0.5 flex h-[calc(100%-4px)] items-center justify-center rounded-md ${intensityClass(ratio)}`}
+                          >
+                            {count > 0 ? `${count}/${selectedIds.length}` : ""}
+                          </div>
                         </td>
                       );
                     })}
