@@ -24,10 +24,13 @@ export default async function SchedulePage({
   ).filter(Boolean);
 
   const supabase = await createClient();
-  const { data: allMembers } = await supabase
-    .from("team_members")
-    .select("id, full_name")
-    .order("full_name");
+  const [{ data: allMembers }, { data: withAvailability }] = await Promise.all([
+    supabase.from("team_members").select("id, full_name").order("full_name"),
+    supabase.from("team_member_availability").select("member_id"),
+  ]);
+
+  const idsWithSchedule = new Set((withAvailability ?? []).map((a) => a.member_id));
+  const missingSchedule = (allMembers ?? []).filter((m) => !idsWithSchedule.has(m.id));
 
   const todayIdx = (new Date().getDay() + 6) % 7; // 0=Lunes..6=Domingo
 
@@ -65,6 +68,27 @@ export default async function SchedulePage({
         para ver un cruce filtrado.
       </p>
 
+      {missingSchedule.length > 0 && (
+        <div className="mb-6 rounded-lg border border-amber-300/60 bg-amber-50 p-4 dark:border-amber-900/40 dark:bg-amber-950/20">
+          <p className="mb-2 text-sm font-medium text-amber-800 dark:text-amber-200">
+            {missingSchedule.length} integrante{missingSchedule.length === 1 ? "" : "s"} todavía
+            no {missingSchedule.length === 1 ? "cargó" : "cargaron"} su horario
+          </p>
+          <ul className="flex flex-wrap gap-2">
+            {missingSchedule.map((m) => (
+              <li key={m.id}>
+                <Link
+                  href={`/members/${m.id}#disponibilidad`}
+                  className="rounded-full border border-amber-400/60 bg-white px-3 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-800 dark:bg-slate-800 dark:text-amber-300 dark:hover:bg-amber-950/40"
+                >
+                  {m.full_name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <form
         action="/schedule"
         className="mb-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800"
@@ -87,6 +111,12 @@ export default async function SchedulePage({
                   defaultChecked={selectedIds.includes(m.id)}
                 />
                 {m.full_name}
+                {!idsWithSchedule.has(m.id) && (
+                  <span
+                    title="Todavía no cargó su horario"
+                    className="h-1.5 w-1.5 rounded-full bg-amber-400"
+                  />
+                )}
               </label>
               <Link
                 href={`/members/${m.id}#disponibilidad`}
