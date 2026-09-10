@@ -24,6 +24,7 @@ export async function createMember(formData: FormData) {
   const joinDate = String(formData.get("join_date") ?? "").trim();
   const status = String(formData.get("status") ?? "activo");
   const notes = String(formData.get("notes") ?? "").trim();
+  const projectIds = formData.getAll("project_ids").map(String).filter(Boolean);
 
   if (!fullName) {
     redirect(`/members/new?error=${encodeURIComponent("Completa al menos el nombre.")}`);
@@ -55,6 +56,12 @@ export async function createMember(formData: FormData) {
 
   if (error || !data) {
     redirect(`/members/new?error=${encodeURIComponent(error?.message ?? "No se pudo crear el integrante")}`);
+  }
+
+  if (projectIds.length > 0) {
+    await supabase
+      .from("team_member_projects")
+      .insert(projectIds.map((project_id) => ({ member_id: data.id, project_id })));
   }
 
   redirect(`/dashboard?success=${encodeURIComponent("Integrante registrado exitosamente.")}`);

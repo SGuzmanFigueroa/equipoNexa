@@ -12,10 +12,20 @@ export default async function DashboardPage({
   const { status, q, success } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: allMembers }, { data: profiles }] = await Promise.all([
+  const [{ data: allMembers }, { data: profiles }, { data: memberProjects }] = await Promise.all([
     supabase.from("team_members").select("status, email"),
     supabase.from("profiles").select("id, email, full_name, role, created_at"),
+    supabase.from("team_member_projects").select("member_id, project:projects(name, code)"),
   ]);
+
+  const projectsByMember = new Map<string, string[]>();
+  for (const mp of memberProjects ?? []) {
+    const code = (mp.project as unknown as { code: string } | null)?.code;
+    if (!code) continue;
+    const list = projectsByMember.get(mp.member_id) ?? [];
+    list.push(code);
+    projectsByMember.set(mp.member_id, list);
+  }
 
   const stats = {
     total: allMembers?.length ?? 0,
@@ -177,6 +187,7 @@ export default async function DashboardPage({
                 <th className="px-4 py-2 font-medium">Nombre</th>
                 <th className="px-4 py-2 font-medium">Área</th>
                 <th className="px-4 py-2 font-medium">Cargo</th>
+                <th className="px-4 py-2 font-medium">Proyectos</th>
                 <th className="px-4 py-2 font-medium">Ingreso</th>
                 <th className="px-4 py-2 font-medium">Estado</th>
               </tr>
@@ -201,6 +212,22 @@ export default async function DashboardPage({
                   <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">
                     {m.position ?? "—"}
                   </td>
+                  <td className="px-4 py-2.5">
+                    {(projectsByMember.get(m.id) ?? []).length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {projectsByMember.get(m.id)!.map((code) => (
+                          <span
+                            key={code}
+                            className="rounded bg-nexa-light px-1.5 py-0.5 text-xs font-medium text-nexa-blue dark:bg-blue-950/40 dark:text-blue-300"
+                          >
+                            {code}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">
                     {m.join_date ?? "—"}
                   </td>
@@ -211,7 +238,7 @@ export default async function DashboardPage({
               ))}
               {members?.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-slate-400">
+                  <td colSpan={6} className="px-4 py-10 text-center text-slate-400">
                     No hay integrantes con estos filtros.
                   </td>
                 </tr>

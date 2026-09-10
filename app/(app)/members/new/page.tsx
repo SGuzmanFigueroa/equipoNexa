@@ -1,6 +1,8 @@
+import Link from "next/link";
 import SubmitButton from "@/components/SubmitButton";
+import { createClient } from "@/lib/supabase/server";
 import { createMember } from "./actions";
-import { MEMBER_STATUSES, STATUS_LABELS } from "@/lib/types";
+import { MEMBER_STATUSES, STATUS_LABELS, type Project } from "@/lib/types";
 
 export default async function NewMemberPage({
   searchParams,
@@ -8,6 +10,11 @@ export default async function NewMemberPage({
   searchParams: Promise<{ error?: string; full_name?: string; email?: string }>;
 }) {
   const { error, full_name, email } = await searchParams;
+  const supabase = await createClient();
+  const { data: projects } = await supabase
+    .from("projects")
+    .select("id, name, code")
+    .order("name");
 
   return (
     <div className="max-w-2xl">
@@ -148,6 +155,37 @@ export default async function NewMemberPage({
               placeholder="Ej: QA Automation"
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
             />
+          </div>
+        </div>
+
+        <div className="border-t border-slate-100 pt-4 dark:border-slate-700">
+          <div className="mb-2 flex items-center justify-between">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Proyectos asignados
+            </label>
+            <Link href="/projects" className="text-xs text-nexa-blue hover:underline">
+              + Agregar proyecto nuevo
+            </Link>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {(projects as Pick<Project, "id" | "name" | "code">[] | null)?.map((p) => (
+              <label
+                key={p.id}
+                className="flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+              >
+                <input type="checkbox" name="project_ids" value={p.id} />
+                {p.name}
+              </label>
+            ))}
+            {projects?.length === 0 && (
+              <p className="text-sm text-slate-400">
+                Todavía no hay proyectos —{" "}
+                <Link href="/projects" className="text-nexa-blue hover:underline">
+                  crea el primero
+                </Link>
+                .
+              </p>
+            )}
           </div>
         </div>
 

@@ -25,6 +25,7 @@ export async function updateMember(memberId: string, formData: FormData) {
   const endDate = String(formData.get("end_date") ?? "").trim();
   const status = String(formData.get("status") ?? "activo");
   const notes = String(formData.get("notes") ?? "").trim();
+  const projectIds = formData.getAll("project_ids").map(String).filter(Boolean);
 
   const { error } = await supabase
     .from("team_members")
@@ -51,6 +52,13 @@ export async function updateMember(memberId: string, formData: FormData) {
 
   if (error) {
     redirect(`/members/${memberId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  await supabase.from("team_member_projects").delete().eq("member_id", memberId);
+  if (projectIds.length > 0) {
+    await supabase
+      .from("team_member_projects")
+      .insert(projectIds.map((project_id) => ({ member_id: memberId, project_id })));
   }
 
   redirect(`/members/${memberId}?success=${encodeURIComponent("Cambios guardados exitosamente.")}`);
@@ -82,4 +90,25 @@ export async function addTrackingEntry(memberId: string, formData: FormData) {
   });
 
   redirect(`/members/${memberId}?success=${encodeURIComponent("Nota de seguimiento agregada.")}`);
+}
+
+export async function saveAvailability(memberId: string, slots: string[]) {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  await supabase.from("team_member_availability").delete().eq("member_id", memberId);
+
+  const rows = slots
+    .map((slot) => {
+      const [dayStr, hourStr] = slot.split("-");
+      const day_of_week = Number(dayStr);
+      const hour = Number(hourStr);
+      if (Number.isNaN(day_of_week) || Number.isNaN(hour)) return null;
+      return { member_id: memberId, day_of_week, hour };
+    })
+    .filter((r): r is { member_id: string; day_of_week: number; hour: number } => r !== null);
+
+  if (rows.length > 0) {
+    await supabase.from("team_member_availability").insert(rows);
+  }
 }

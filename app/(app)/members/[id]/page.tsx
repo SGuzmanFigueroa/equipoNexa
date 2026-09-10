@@ -1,10 +1,19 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import SubmitButton from "@/components/SubmitButton";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import SuccessBanner from "@/components/SuccessBanner";
-import { updateMember, deleteMember, addTrackingEntry } from "./actions";
-import { MEMBER_STATUSES, STATUS_LABELS, type TeamMember, type TrackingEntry } from "@/lib/types";
+import AvailabilityGrid from "@/components/AvailabilityGrid";
+import { updateMember, deleteMember, addTrackingEntry, saveAvailability } from "./actions";
+import {
+  MEMBER_STATUSES,
+  STATUS_LABELS,
+  slotKey,
+  type TeamMember,
+  type TrackingEntry,
+  type Project,
+} from "@/lib/types";
 
 export default async function MemberDetailPage({
   params,
@@ -17,22 +26,29 @@ export default async function MemberDetailPage({
   const { error, success } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: member }, { data: tracking }] = await Promise.all([
-    supabase.from("team_members").select("*").eq("id", id).single(),
-    supabase
-      .from("team_member_tracking")
-      .select("*, author:profiles(id, full_name, email)")
-      .eq("member_id", id)
-      .order("entry_date", { ascending: false })
-      .order("created_at", { ascending: false }),
-  ]);
+  const [{ data: member }, { data: tracking }, { data: projects }, { data: memberProjects }, { data: availability }] =
+    await Promise.all([
+      supabase.from("team_members").select("*").eq("id", id).single(),
+      supabase
+        .from("team_member_tracking")
+        .select("*, author:profiles(id, full_name, email)")
+        .eq("member_id", id)
+        .order("entry_date", { ascending: false })
+        .order("created_at", { ascending: false }),
+      supabase.from("projects").select("id, name, code").order("name"),
+      supabase.from("team_member_projects").select("project_id").eq("member_id", id),
+      supabase.from("team_member_availability").select("day_of_week, hour").eq("member_id", id),
+    ]);
 
   if (!member) notFound();
 
   const m = member as TeamMember;
+  const selectedProjectIds = new Set((memberProjects ?? []).map((mp) => mp.project_id));
+  const initialSlots = (availability ?? []).map((a) => slotKey(a.day_of_week, a.hour));
   const updateWithId = updateMember.bind(null, id);
   const deleteWithId = deleteMember.bind(null, id);
   const addTrackingWithId = addTrackingEntry.bind(null, id);
+  const saveAvailabilityWithId = saveAvailability.bind(null, id);
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -164,6 +180,42 @@ export default async function MemberDetailPage({
                 defaultValue={m.favorite_area ?? ""}
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
               />
+            </div>
+          </div>
+
+          <div className="border-t border-slate-100 pt-4 dark:border-slate-700">
+            <div className="mb-2 flex items-center justify-between">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                Proyectos asignados
+              </label>
+              <Link href="/projects" className="text-xs text-nexa-blue hover:underline">
+                + Agregar proyecto nuevo
+              </Link>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {(projects as Pick<Project, "id" | "name" | "code">[] | null)?.map((p) => (
+                <label
+                  key={p.id}
+                  className="flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                >
+                  <input
+                    type="checkbox"
+                    name="project_ids"
+                    value={p.id}
+                    defaultChecked={selectedProjectIds.has(p.id)}
+                  />
+                  {p.name}
+                </label>
+              ))}
+              {projects?.length === 0 && (
+                <p className="text-sm text-slate-400">
+                  Todavía no hay proyectos —{" "}
+                  <Link href="/projects" className="text-nexa-blue hover:underline">
+                    crea el primero
+                  </Link>
+                  .
+                </p>
+              )}
             </div>
           </div>
 
@@ -317,6 +369,20 @@ export default async function MemberDetailPage({
             </p>
           )}
         </ul>
+      </section>
+
+      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <h2 className="mb-1 text-sm font-semibold text-nexa-navy dark:text-white">
+          Disponibilidad horaria
+        </h2>
+        <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
+          Marca las horas en las que {m.full_name.split(" ")[0]} suele estar libre. Se usa en{" "}
+          <Link href="/schedule" className="text-nexa-blue hover:underline">
+            Horarios
+          </Link>{" "}
+          para cruzar disponibilidad con el resto del equipo.
+        </p>
+        <AvailabilityGrid initialSlots={initialSlots} onSave={saveAvailabilityWithId} />
       </section>
     </div>
   );

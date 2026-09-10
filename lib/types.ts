@@ -51,3 +51,28 @@ export interface TrackingEntry {
   created_at: string;
   author: Pick<Profile, "id" | "full_name" | "email"> | null;
 }
+
+export interface Project {
+  id: string;
+  name: string;
+  slug: string;
+  code: string;
+  description: string | null;
+}
+
+// Weekly recurring availability grid: day_of_week 0=Lunes .. 6=Domingo,
+// hour = slot start (7..22, 1h blocks).
+export const DAY_LABELS = [
+  "Lunes",
+  "Martes",
+  "Miércoles",
+  "Jueves",
+  "Viernes",
+  "Sábado",
+  "Domingo",
+];
+export const HOURS: number[] = Array.from({ length: 16 }, (_, i) => i + 7);
+
+export function slotKey(dayOfWeek: number, hour: number) {
+  return `${dayOfWeek}-${hour}`;
+}
