@@ -10,22 +10,47 @@ import {
   type TeamMember,
 } from "@/lib/types";
 
-// Mismo semáforo que la grilla individual (verde/amarillo/rojo), aplicado a
-// la fracción del grupo seleccionado que marcó "Libre" en esa hora — no un
-// degradado de 5 pasos, exactamente estos 3 colores, siempre.
+// Mismo semáforo de 3 colores que la grilla individual (verde/amarillo/rojo)
+// — nunca un cuarto color — pero con 3 tonos dentro de cada uno según qué
+// tan cerca está del límite, para poder distinguir 1/20 de 9/20 sin dejar
+// de ser "amarillo" ambos.
+const TENTATIVO_SHADES = [
+  "bg-amber-100 dark:bg-amber-950/30",
+  "bg-amber-200 dark:bg-amber-800/50",
+  "bg-amber-300 dark:bg-amber-700/60",
+];
+const LIBRE_SHADES = [
+  "bg-emerald-200 dark:bg-emerald-800/50",
+  "bg-emerald-400 dark:bg-emerald-600/70",
+  "bg-emerald-500 dark:bg-emerald-500",
+];
+
 function groupStatusClass(ratio: number) {
-  if (ratio >= 0.5) return AVAILABILITY_COLORS.libre;
-  if (ratio > 0) return AVAILABILITY_COLORS.tentativo;
-  return AVAILABILITY_COLORS.ocupado;
+  if (ratio === 0) return AVAILABILITY_COLORS.ocupado;
+  if (ratio < 0.5) {
+    const step = Math.min(2, Math.floor((ratio / 0.5) * 3));
+    return TENTATIVO_SHADES[step];
+  }
+  const step = Math.min(2, Math.floor(((ratio - 0.5) / 0.5) * 3));
+  return LIBRE_SHADES[step];
 }
 
 export default async function SchedulePage({
   searchParams,
 }: {
-  searchParams: Promise<{ members?: string | string[]; filtered?: string }>;
+  searchParams: Promise<{
+    members?: string | string[];
+    filtered?: string;
+    day?: string;
+    hour?: string;
+    onlyFree?: string;
+  }>;
 }) {
   await requireAdmin();
-  const { members: rawMembers, filtered } = await searchParams;
+  const { members: rawMembers, filtered, day, hour, onlyFree: onlyFreeParam } = await searchParams;
+  const selectedDay = day !== undefined ? Number(day) : null;
+  const selectedHour = hour !== undefined ? Number(hour) : null;
+  const onlyFree = onlyFreeParam === "1";
   const isFiltered = filtered === "1";
   const checkedIds = (
     Array.isArray(rawMembers) ? rawMembers : rawMembers ? [rawMembers] : []
@@ -66,6 +91,75 @@ export default async function SchedulePage({
       const key = slotKey(a.day_of_week, a.hour);
       counts.set(key, (counts.get(key) ?? 0) + 1);
     }
+  }
+
+  // Query string helper that keeps the current selection/filter when
+  // linking to a day's detail (or clearing it).
+  function scheduleHref(extra: Record<string, string | null>) {
+    const params = new URLSearchParams();
+    if (isFiltered) {
+      params.set("filtered", "1");
+      checkedIds.forEach((id) => params.append("members", id));
+    }
+    if (selectedDay !== null) params.set("day", String(selectedDay));
+    if (selectedHour !== null) params.set("hour", String(selectedHour));
+    if (onlyFree) params.set("onlyFree", "1");
+    for (const [key, value] of Object.entries(extra)) {
+      if (value === null) params.delete(key);
+      else params.set(key, value);
+    }
+    const qs = params.toString();
+    return qs ? `/schedule?${qs}` : "/schedule";
+  }
+
+  type DetailEntry = { full_name: string; status: "libre" | "tentativo" | "ocupado" };
+  // Detail panel works two ways: pick a day (rows = hours) or pick an hour
+  // (rows = days) — whichever was clicked last wins, they're mutually
+  // exclusive. `detailRows` unifies both into {label, key, entries} so the
+  // panel below only needs one render path.
+  let detailTitle: string | null = null;
+  let detailRows: { key: number; label: string; entries: DetailEntry[] }[] | null = null;
+
+  if (selectedDay !== null && selectedIds.length > 0) {
+    const { data: rows } = await supabase
+      .from("team_member_availability")
+      .select("hour, status, member:team_members(full_name)")
+      .eq("day_of_week", selectedDay)
+      .in("member_id", selectedIds);
+
+    const byHour = new Map<number, DetailEntry[]>();
+    for (const row of rows ?? []) {
+      const fullName = (row.member as unknown as { full_name: string } | null)?.full_name;
+      if (!fullName) continue;
+      const list = byHour.get(row.hour) ?? [];
+      list.push({ full_name: fullName, status: row.status as DetailEntry["status"] });
+      byHour.set(row.hour, list);
+    }
+    detailTitle = `Detalle del ${DAY_LABELS[selectedDay]}`;
+    detailRows = HOURS.filter((h) => byHour.has(h)).map((h) => ({
+      key: h,
+      label: `${String(h).padStart(2, "0")}:00`,
+      entries: byHour.get(h)!,
+    }));
+  } else if (selectedHour !== null && selectedIds.length > 0) {
+    const { data: rows } = await supabase
+      .from("team_member_availability")
+      .select("day_of_week, status, member:team_members(full_name)")
+      .eq("hour", selectedHour)
+      .in("member_id", selectedIds);
+
+    const byDay = new Map<number, DetailEntry[]>();
+    for (const row of rows ?? []) {
+      const fullName = (row.member as unknown as { full_name: string } | null)?.full_name;
+      if (!fullName) continue;
+      const list = byDay.get(row.day_of_week) ?? [];
+      list.push({ full_name: fullName, status: row.status as DetailEntry["status"] });
+      byDay.set(row.day_of_week, list);
+    }
+    detailTitle = `Detalle de las ${String(selectedHour).padStart(2, "0")}:00`;
+    detailRows = DAY_LABELS.map((label, i) => ({ key: i, label, entries: byDay.get(i) ?? [] })).filter(
+      (r) => r.entries.length > 0,
+    );
   }
 
   return (
@@ -202,17 +296,24 @@ export default async function SchedulePage({
                   <th className="w-16"></th>
                   {DAY_LABELS.map((d, i) => (
                     <th key={d} className="pb-2 text-center">
-                      <div
-                        className={`mx-auto flex w-14 flex-col items-center rounded-lg px-1 py-1 ${
-                          todayIdx === i
-                            ? "bg-amber-400 text-nexa-navy dark:bg-amber-500 dark:text-slate-900"
-                            : "text-slate-500 dark:text-slate-400"
+                      <Link
+                        href={scheduleHref({
+                          day: selectedDay === i ? null : String(i),
+                          hour: null,
+                        })}
+                        title="Ver detalle del día con nombres"
+                        className={`mx-auto flex w-14 flex-col items-center rounded-lg px-1 py-1 transition-colors ${
+                          selectedDay === i
+                            ? "bg-nexa-blue text-white"
+                            : todayIdx === i
+                              ? "bg-amber-400 text-nexa-navy hover:bg-amber-500 dark:bg-amber-500 dark:text-slate-900"
+                              : "text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-800"
                         }`}
                       >
                         <span className="text-[11px] font-medium uppercase tracking-wide">
                           {d.slice(0, 3)}
                         </span>
-                      </div>
+                      </Link>
                     </th>
                   ))}
                 </tr>
@@ -221,13 +322,26 @@ export default async function SchedulePage({
                 {HOURS.map((h, rowIdx) => (
                   <tr key={h}>
                     <td
-                      className={`w-16 pr-2 text-right align-top text-[11px] font-medium text-amber-600 dark:text-amber-400 ${
+                      className={`w-16 pr-2 text-right align-top text-[11px] ${
                         rowIdx === 0
                           ? ""
                           : "border-t border-dashed border-slate-300 dark:border-slate-700"
                       }`}
                     >
-                      {String(h).padStart(2, "0")}:00
+                      <Link
+                        href={scheduleHref({
+                          hour: selectedHour === h ? null : String(h),
+                          day: null,
+                        })}
+                        title="Ver detalle de esta hora con nombres"
+                        className={`inline-block rounded px-1 font-medium transition-colors ${
+                          selectedHour === h
+                            ? "bg-nexa-blue text-white"
+                            : "text-amber-600 hover:bg-slate-200 dark:text-amber-400 dark:hover:bg-slate-800"
+                        }`}
+                      >
+                        {String(h).padStart(2, "0")}:00
+                      </Link>
                     </td>
                     {DAY_LABELS.map((_, dayIdx) => {
                       const key = slotKey(dayIdx, h);
@@ -260,6 +374,77 @@ export default async function SchedulePage({
             Solo cuenta lo que cada quien marcó como &quot;Libre&quot; en su propia grilla —
             &quot;Probablemente ocupado&quot; y &quot;Ocupado&quot; no suman aquí.
           </p>
+
+          {detailTitle && detailRows && (
+            <div className="mt-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-sm font-semibold text-nexa-navy dark:text-white">
+                  {detailTitle}
+                </h2>
+                <div className="flex items-center gap-3">
+                  <Link
+                    href={scheduleHref({ onlyFree: onlyFree ? null : "1" })}
+                    className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+                      onlyFree
+                        ? "border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
+                        : "border-slate-300 text-slate-500 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-400 dark:hover:bg-slate-800"
+                    }`}
+                  >
+                    {onlyFree ? "✓ " : ""}Solo libres
+                  </Link>
+                  <Link
+                    href={scheduleHref({ day: null, hour: null })}
+                    className="text-xs text-nexa-blue hover:underline"
+                  >
+                    Cerrar detalle
+                  </Link>
+                </div>
+              </div>
+
+              {detailRows.length === 0 ||
+              detailRows.every((r) => onlyFree && r.entries.every((e) => e.status !== "libre")) ? (
+                <p className="text-sm text-slate-400">
+                  {onlyFree
+                    ? "Nadie del grupo marcó libre aquí."
+                    : "Nadie del grupo marcó nada aquí todavía."}
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {detailRows.map(({ key, label, entries }) => {
+                    const visible = onlyFree
+                      ? entries.filter((e) => e.status === "libre")
+                      : entries;
+                    if (visible.length === 0) return null;
+                    return (
+                      <div
+                        key={key}
+                        className="flex flex-col gap-1 border-b border-slate-100 pb-2 last:border-0 dark:border-slate-700 sm:flex-row sm:items-start sm:gap-3"
+                      >
+                        <span className="w-16 shrink-0 text-xs font-medium text-amber-600 dark:text-amber-400">
+                          {label}
+                        </span>
+                        <div className="flex flex-1 flex-wrap gap-1.5">
+                          {(["libre", "tentativo", "ocupado"] as const).map((status) =>
+                            visible
+                              .filter((e) => e.status === status)
+                              .map((e) => (
+                                <span
+                                  key={`${status}-${e.full_name}`}
+                                  className={`rounded-full px-2 py-0.5 text-xs font-medium text-nexa-navy dark:text-white ${AVAILABILITY_COLORS[status].split(" ")[0]}`}
+                                  title={AVAILABILITY_LABELS[status]}
+                                >
+                                  {e.full_name}
+                                </span>
+                              )),
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
     </div>
