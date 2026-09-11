@@ -10,19 +10,11 @@ export async function GET() {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
-  const supabase = await createClient();
-
-  if (profile.role !== "admin") {
-    const { data: leaderRow } = await supabase
-      .from("team_members")
-      .select("id")
-      .eq("profile_id", profile.id)
-      .eq("is_leader", true)
-      .maybeSingle();
-    if (!leaderRow) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-    }
+  if (profile.role !== "admin" && profile.role !== "lider") {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
+
+  const supabase = await createClient();
 
   const [{ data: members }, { data: tracking }] = await Promise.all([
     supabase

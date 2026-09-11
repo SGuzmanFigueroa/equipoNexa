@@ -10,6 +10,7 @@ import { updateMember, deleteMember, addTrackingEntry, saveAvailability } from "
 import {
   CAREER_OPTIONS,
   MEMBER_STATUSES,
+  ROLE_LABELS,
   ROLE_OPTIONS,
   STATUS_LABELS,
   encodeSlot,
@@ -50,12 +51,13 @@ export default async function MemberDetailPage({
     supabase.from("projects").select("id, name, code").order("name"),
     supabase.from("team_member_projects").select("project_id").eq("member_id", id),
     supabase.from("team_member_availability").select("day_of_week, hour, status").eq("member_id", id),
-    supabase.from("profiles").select("id, email, full_name").order("email"),
+    supabase.from("profiles").select("id, email, full_name, role").order("email"),
   ]);
 
   if (!member) notFound();
 
   const m = member as TeamMember;
+  const linkedProfile = (allProfiles as Profile[] | null)?.find((p) => p.id === m.profile_id);
   const selectedProjectIds = new Set((memberProjects ?? []).map((mp) => mp.project_id));
   const initialSlots = (availability ?? []).map((a) =>
     encodeSlot(a.day_of_week, a.hour, a.status as AvailabilityStatus),
@@ -335,16 +337,15 @@ export default async function MemberDetailPage({
             </p>
           </div>
 
-          {isAdmin && (
-            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/40 dark:bg-amber-950/20">
-              <label className="flex items-center gap-2 text-sm font-medium text-amber-800 dark:text-amber-200">
-                <input type="checkbox" name="is_leader" defaultChecked={m.is_leader} />
-                Es líder
-              </label>
-              <p className="mt-1 text-xs text-amber-700/80 dark:text-amber-300/70">
-                Un líder puede crear/editar integrantes casi como un admin, pero no puede cambiar
-                nombre, correo, fecha de ingreso ni la cuenta vinculada de nadie, ni eliminar
-                integrantes ni nombrar a otros líderes — eso queda solo para ti.
+          {linkedProfile && (
+            <div className="rounded-md border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/40">
+              <p className="text-sm text-slate-700 dark:text-slate-300">
+                Rol de acceso: <span className="font-medium">{ROLE_LABELS[linkedProfile.role]}</span>
+              </p>
+              <p className="mt-1 text-xs text-slate-400">
+                Esto (Admin, Líder, QA, Developer, Backend, Frontend) se asigna desde{" "}
+                <strong>Usuarios y roles</strong> en el Gestor de Tickets — es la misma cuenta,
+                mismo rol en las dos apps.
               </p>
             </div>
           )}

@@ -1,4 +1,16 @@
-export type UserRole = "admin" | "qa" | "developer" | "backend" | "frontend";
+export type UserRole = "admin" | "lider" | "qa" | "developer" | "backend" | "frontend";
+
+// Assigned from bug-tracker's "Usuarios y roles" page — same shared
+// profiles.role, just also read here to gate admin/líder access and to
+// display it. Kept in sync with bug-tracker's ROLE_LABELS.
+export const ROLE_LABELS: Record<UserRole, string> = {
+  admin: "Admin",
+  lider: "Líder",
+  qa: "QA",
+  developer: "Developer",
+  backend: "Backend",
+  frontend: "Frontend",
+};
 
 export interface Profile {
   id: string;
@@ -38,7 +50,6 @@ export interface TeamMember {
   end_date: string | null;
   status: MemberStatus;
   notes: string | null;
-  is_leader: boolean;
   created_by: string | null;
   created_at: string;
   updated_at: string;

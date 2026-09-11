@@ -39,6 +39,7 @@ export default async function DashboardPage({
   const memberEmails = new Set(
     (allMembers ?? []).map((m) => m.email?.toLowerCase()).filter(Boolean),
   );
+  const roleByProfileId = new Map((profiles ?? []).map((p) => [p.id, p.role]));
   const unlinkedProfiles = ((profiles ?? []) as Profile[]).filter(
     (p) => !memberEmails.has(p.email.toLowerCase()),
   );
@@ -207,7 +208,7 @@ export default async function DashboardPage({
                     >
                       {m.full_name}
                     </Link>
-                    {m.is_leader && (
+                    {m.profile_id && roleByProfileId.get(m.profile_id) === "lider" && (
                       <span
                         title="Líder"
                         className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
