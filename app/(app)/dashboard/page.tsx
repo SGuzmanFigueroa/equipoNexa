@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdminOrLeader } from "@/lib/auth";
 import { StatusBadge } from "@/components/Badge";
 import SuccessBanner from "@/components/SuccessBanner";
 import { MEMBER_STATUSES, STATUS_LABELS, type Profile, type TeamMember } from "@/lib/types";
@@ -10,7 +10,7 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ status?: string; q?: string; success?: string }>;
 }) {
-  await requireAdmin();
+  await requireAdminOrLeader();
   const { status, q, success } = await searchParams;
   const supabase = await createClient();
 
@@ -207,6 +207,14 @@ export default async function DashboardPage({
                     >
                       {m.full_name}
                     </Link>
+                    {m.is_leader && (
+                      <span
+                        title="Líder"
+                        className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
+                      >
+                        Líder
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">
                     {m.area ?? m.career ?? "—"}

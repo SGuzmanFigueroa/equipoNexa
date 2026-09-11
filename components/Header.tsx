@@ -4,11 +4,15 @@ import type { Profile } from "@/lib/types";
 import ThemeToggle from "./ThemeToggle";
 import NavLink from "./NavLink";
 
-export default function Header({ profile }: { profile: Profile }) {
+export default function Header({ profile, isLeader }: { profile: Profile; isLeader: boolean }) {
+  const isAdmin = profile.role === "admin";
   return (
     <header className="bg-nexa-navy px-4 py-3 md:px-8">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-y-2">
-        <Link href={profile.role === "admin" ? "/dashboard" : "/me"} className="flex items-center gap-2">
+        <Link
+          href={isAdmin || isLeader ? "/dashboard" : "/me"}
+          className="flex items-center gap-2"
+        >
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-nexa-sky to-nexa-blue text-sm font-bold text-white">
             N
           </span>
@@ -19,11 +23,16 @@ export default function Header({ profile }: { profile: Profile }) {
         </Link>
 
         <nav className="flex items-center gap-1">
-          {profile.role === "admin" ? (
+          {isAdmin ? (
             <>
               <NavLink href="/dashboard">Integrantes</NavLink>
               <NavLink href="/projects">Proyectos</NavLink>
               <NavLink href="/schedule">Horarios</NavLink>
+            </>
+          ) : isLeader ? (
+            <>
+              <NavLink href="/dashboard">Integrantes</NavLink>
+              <NavLink href="/me">Mi horario</NavLink>
             </>
           ) : (
             <NavLink href="/me">Mi horario</NavLink>

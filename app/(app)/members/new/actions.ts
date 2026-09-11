@@ -2,10 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdminOrLeader } from "@/lib/auth";
 
 export async function createMember(formData: FormData) {
-  const profile = await requireAdmin();
+  const { profile } = await requireAdminOrLeader();
   const supabase = await createClient();
 
   const fullName = String(formData.get("full_name") ?? "").trim();

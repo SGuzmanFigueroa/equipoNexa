@@ -6,11 +6,23 @@ import { STATUS_LABELS, type MemberStatus, type TeamMember, type TrackingEntry }
 
 export async function GET() {
   const profile = await getCurrentProfile();
-  if (!profile || profile.role !== "admin") {
+  if (!profile) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
   const supabase = await createClient();
+
+  if (profile.role !== "admin") {
+    const { data: leaderRow } = await supabase
+      .from("team_members")
+      .select("id")
+      .eq("profile_id", profile.id)
+      .eq("is_leader", true)
+      .maybeSingle();
+    if (!leaderRow) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    }
+  }
 
   const [{ data: members }, { data: tracking }] = await Promise.all([
     supabase

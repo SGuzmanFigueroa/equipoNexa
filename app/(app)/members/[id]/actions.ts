@@ -2,11 +2,11 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdmin, requireAdminOrLeader } from "@/lib/auth";
 import { decodeSlot } from "@/lib/types";
 
 export async function updateMember(memberId: string, formData: FormData) {
-  await requireAdmin();
+  await requireAdminOrLeader();
   const supabase = await createClient();
 
   const fullName = String(formData.get("full_name") ?? "").trim();
@@ -27,8 +27,13 @@ export async function updateMember(memberId: string, formData: FormData) {
   const status = String(formData.get("status") ?? "activo");
   const notes = String(formData.get("notes") ?? "").trim();
   const profileId = String(formData.get("profile_id") ?? "").trim();
+  const isLeader = formData.get("is_leader") === "on";
   const projectIds = formData.getAll("project_ids").map(String).filter(Boolean);
 
+  // Admin-only fields (full_name/email/join_date/profile_id/is_leader) are
+  // sent as-is here but get silently reverted by the enforce_self_editable_columns
+  // DB trigger if the actor isn't admin — a leader submitting this same form
+  // can't actually change them, by design.
   const { error } = await supabase
     .from("team_members")
     .update({
@@ -50,6 +55,7 @@ export async function updateMember(memberId: string, formData: FormData) {
       status,
       notes: notes || null,
       profile_id: profileId || null,
+      is_leader: isLeader,
     })
     .eq("id", memberId);
 
@@ -75,7 +81,7 @@ export async function deleteMember(memberId: string) {
 }
 
 export async function addTrackingEntry(memberId: string, formData: FormData) {
-  const profile = await requireAdmin();
+  const { profile } = await requireAdminOrLeader();
   const supabase = await createClient();
 
   const entryDate = String(formData.get("entry_date") ?? "");
@@ -96,7 +102,7 @@ export async function addTrackingEntry(memberId: string, formData: FormData) {
 }
 
 export async function saveAvailability(memberId: string, slots: string[]) {
-  await requireAdmin();
+  await requireAdminOrLeader();
   const supabase = await createClient();
 
   await supabase.from("team_member_availability").delete().eq("member_id", memberId);
