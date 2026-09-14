@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 import SubmitButton from "@/components/SubmitButton";
@@ -92,21 +93,26 @@ export default async function ProjectsPage({
             key={p.id}
             className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-800"
           >
-            <div className="flex items-center gap-3">
+            <Link href={`/projects/${p.id}`} className="flex flex-1 items-center gap-3">
               <span className="flex h-8 w-8 items-center justify-center rounded-md bg-nexa-light text-xs font-semibold text-nexa-blue dark:bg-blue-950/40 dark:text-blue-300">
                 {p.code}
               </span>
               <div>
-                <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{p.name}</p>
+                <p className="text-sm font-medium text-slate-800 hover:text-nexa-blue hover:underline dark:text-slate-100">
+                  {p.name}
+                </p>
                 {p.description && (
                   <p className="text-xs text-slate-500 dark:text-slate-400">{p.description}</p>
                 )}
               </div>
-            </div>
+            </Link>
             <div className="flex items-center gap-3">
-              <span className="text-xs text-slate-400">
-                {counts.get(p.id) ?? 0} integrante{(counts.get(p.id) ?? 0) === 1 ? "" : "s"}
-              </span>
+              <Link
+                href={`/projects/${p.id}`}
+                className="text-xs text-nexa-blue hover:underline"
+              >
+                Ver equipo ({counts.get(p.id) ?? 0})
+              </Link>
               <form action={deleteProject}>
                 <input type="hidden" name="id" value={p.id} />
                 <ConfirmSubmitButton
