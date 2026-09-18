@@ -26,7 +26,7 @@ export default function Header({ profile, isLeader }: { profile: Profile; isLead
 
   return (
     <header className="bg-nexa-navy px-4 py-3 md:px-8">
-      <div className="mx-auto flex max-w-5xl items-center justify-between gap-y-2">
+      <div className="mx-auto grid max-w-5xl grid-cols-[auto_1fr_auto] items-center gap-4">
         <Link
           href={isAdmin || isLeader ? "/dashboard" : "/me"}
           className="flex items-center gap-2"
@@ -34,13 +34,10 @@ export default function Header({ profile, isLeader }: { profile: Profile; isLead
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-nexa-sky to-nexa-blue text-sm font-bold text-white">
             N
           </span>
-          <div>
-            <p className="text-sm font-semibold leading-tight text-white">Equipo Nexa</p>
-            <p className="text-xs leading-tight text-blue-200/70">Integrantes</p>
-          </div>
+          <p className="text-sm font-semibold leading-tight text-white">Equipo Nexa</p>
         </Link>
 
-        <nav className="hidden items-center gap-1 md:flex">
+        <nav className="hidden items-center justify-center gap-1 md:flex">
           {navItems.map((item) => (
             <NavLink key={item.href} href={item.href}>
               {item.label}
@@ -48,48 +45,50 @@ export default function Header({ profile, isLeader }: { profile: Profile; isLead
           ))}
         </nav>
 
-        <div className="hidden items-center gap-1 md:flex">
-          <span className="hidden text-sm text-blue-100/80 lg:inline">
-            {profile.full_name ?? profile.email}
-          </span>
-          <ThemeToggle />
-          <form action={signOut}>
-            <button
-              type="submit"
-              className="rounded-md px-3 py-1.5 text-sm text-blue-200/80 transition-colors hover:bg-white/10 hover:text-white"
-            >
-              Cerrar sesión
-            </button>
-          </form>
-        </div>
+        <div className="justify-self-end">
+          <div className="hidden items-center gap-1 md:flex">
+            <span className="hidden text-sm text-blue-100/80 lg:inline">
+              {profile.full_name ?? profile.email}
+            </span>
+            <ThemeToggle />
+            <form action={signOut}>
+              <button
+                type="submit"
+                className="rounded-md px-3 py-1.5 text-sm text-blue-200/80 transition-colors hover:bg-white/10 hover:text-white"
+              >
+                Cerrar sesión
+              </button>
+            </form>
+          </div>
 
-        <button
-          type="button"
-          onClick={() => setMenuOpen((v) => !v)}
-          aria-expanded={menuOpen}
-          aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
-          className="flex h-10 w-10 items-center justify-center rounded-md text-white/90 transition-colors hover:bg-white/10 md:hidden"
-        >
-          {menuOpen ? (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M6 6l12 12M18 6L6 18"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-          ) : (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M4 7h16M4 12h16M4 17h16"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-          )}
-        </button>
+          <button
+            type="button"
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-expanded={menuOpen}
+            aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
+            className="flex h-10 w-10 items-center justify-center rounded-md text-white/90 transition-colors hover:bg-white/10 md:hidden"
+          >
+            {menuOpen ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M6 6l12 12M18 6L6 18"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M4 7h16M4 12h16M4 17h16"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            )}
+          </button>
+        </div>
       </div>
 
       {menuOpen && (

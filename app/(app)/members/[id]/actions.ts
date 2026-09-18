@@ -5,69 +5,71 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAdmin, requireAdminOrLeader } from "@/lib/auth";
 import { decodeSlot } from "@/lib/types";
 
+// The profile page now splits the old one-big-form into several small
+// forms (one per tab), each posting to this same action. Only fields that
+// are actually present in the submitted FormData are written — a tab's
+// form simply doesn't render inputs for fields it doesn't own, so
+// submitting "Información" can no longer blank out "Nexa" or vice versa.
+// Admin-only fields (full_name/email/join_date/profile_id) are sent as-is
+// here but get silently reverted by the enforce_self_editable_columns DB
+// trigger if the actor isn't admin. The role itself (admin/líder/etc.)
+// isn't edited here at all — that's shared with bug-tracker's Usuarios y
+// roles page.
+const TEXT_FIELDS = [
+  "full_name",
+  "email",
+  "phone",
+  "career",
+  "last_job_role",
+  "linkedin_url",
+  "github_username",
+  "skills",
+  "favorite_area",
+  "area",
+  "position",
+  "collaboration_type",
+  "join_date",
+  "end_date",
+  "notes",
+  "profile_id",
+] as const;
+
 export async function updateMember(memberId: string, formData: FormData) {
   await requireAdminOrLeader();
   const supabase = await createClient();
 
-  const fullName = String(formData.get("full_name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim();
-  const phone = String(formData.get("phone") ?? "").trim();
-  const age = String(formData.get("age") ?? "").trim();
-  const career = String(formData.get("career") ?? "").trim();
-  const lastJobRole = String(formData.get("last_job_role") ?? "").trim();
-  const linkedinUrl = String(formData.get("linkedin_url") ?? "").trim();
-  const githubUsername = String(formData.get("github_username") ?? "").trim();
-  const skills = String(formData.get("skills") ?? "").trim();
-  const favoriteArea = String(formData.get("favorite_area") ?? "").trim();
-  const area = String(formData.get("area") ?? "").trim();
-  const position = String(formData.get("position") ?? "").trim();
-  const collaborationType = String(formData.get("collaboration_type") ?? "").trim();
-  const joinDate = String(formData.get("join_date") ?? "").trim();
-  const endDate = String(formData.get("end_date") ?? "").trim();
-  const status = String(formData.get("status") ?? "activo");
-  const notes = String(formData.get("notes") ?? "").trim();
-  const profileId = String(formData.get("profile_id") ?? "").trim();
-  const projectIds = formData.getAll("project_ids").map(String).filter(Boolean);
+  const updates: Record<string, string | number | null> = {};
 
-  // Admin-only fields (full_name/email/join_date/profile_id) are sent as-is
-  // here but get silently reverted by the enforce_self_editable_columns DB
-  // trigger if the actor isn't admin — a leader submitting this same form
-  // can't actually change them, by design. The role itself (admin/líder/
-  // etc.) isn't edited here at all — that's shared with bug-tracker's
-  // Usuarios y roles page.
-  const { error } = await supabase
-    .from("team_members")
-    .update({
-      full_name: fullName,
-      email: email || null,
-      phone: phone || null,
-      age: age ? Number(age) : null,
-      career: career || null,
-      last_job_role: lastJobRole || null,
-      linkedin_url: linkedinUrl || null,
-      github_username: githubUsername || null,
-      skills: skills || null,
-      favorite_area: favoriteArea || null,
-      area: area || null,
-      position: position || null,
-      collaboration_type: collaborationType || null,
-      join_date: joinDate || null,
-      end_date: endDate || null,
-      status,
-      notes: notes || null,
-      profile_id: profileId || null,
-    })
-    .eq("id", memberId);
+  for (const field of TEXT_FIELDS) {
+    if (!formData.has(field)) continue;
+    const value = String(formData.get(field) ?? "").trim();
+    updates[field] = value || null;
+  }
+  if (formData.has("age")) {
+    const age = String(formData.get("age") ?? "").trim();
+    updates.age = age ? Number(age) : null;
+  }
+  if (formData.has("status")) {
+    updates.status = String(formData.get("status") ?? "activo");
+  }
+  // full_name is required at the DB level — never send an empty string.
+  if ("full_name" in updates && !updates.full_name) delete updates.full_name;
 
-  if (error) {
-    redirect(`/members/${memberId}?error=${encodeURIComponent(error.message)}`);
+  if (Object.keys(updates).length > 0) {
+    const { error } = await supabase.from("team_members").update(updates).eq("id", memberId);
+    if (error) {
+      redirect(`/members/${memberId}?error=${encodeURIComponent(error.message)}`);
+    }
   }
 
-  await supabase.from("team_member_projects").delete().eq("member_id", memberId);
-  if (projectIds.length > 0) {
-    await supabase
-      .from("team_member_projects")
-      .insert(projectIds.map((project_id) => ({ member_id: memberId, project_id })));
+  if (formData.has("manage_project_ids")) {
+    const projectIds = formData.getAll("project_ids").map(String).filter(Boolean);
+    await supabase.from("team_member_projects").delete().eq("member_id", memberId);
+    if (projectIds.length > 0) {
+      await supabase
+        .from("team_member_projects")
+        .insert(projectIds.map((project_id) => ({ member_id: memberId, project_id })));
+    }
   }
 
   redirect(`/members/${memberId}?success=${encodeURIComponent("Cambios guardados exitosamente.")}`);

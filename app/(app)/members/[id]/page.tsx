@@ -5,7 +5,11 @@ import { requireAdminOrLeader } from "@/lib/auth";
 import SubmitButton from "@/components/SubmitButton";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import FlashToast from "@/components/FlashToast";
-import AvailabilityGrid from "@/components/AvailabilityGrid";
+import AvailabilityEditor from "@/components/AvailabilityEditor";
+import InitialsAvatar from "@/components/Avatar";
+import { StatusBadge } from "@/components/Badge";
+import Tabs from "@/components/Tabs";
+import ReadEditToggle from "@/components/ReadEditToggle";
 import { updateMember, deleteMember, addTrackingEntry, saveAvailability } from "./actions";
 import {
   CAREER_OPTIONS,
@@ -20,6 +24,21 @@ import {
   type Profile,
   type AvailabilityStatus,
 } from "@/lib/types";
+
+const inputClass =
+  "w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:disabled:bg-slate-800/60 dark:disabled:text-slate-500";
+const labelClass = "mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300";
+
+function Field({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div>
+      <dt className="text-xs uppercase tracking-wide text-slate-400">{label}</dt>
+      <dd className="text-sm text-slate-700 dark:text-slate-200">
+        {value || <span className="text-slate-400">Sin especificar</span>}
+      </dd>
+    </div>
+  );
+}
 
 export default async function MemberDetailPage({
   params,
@@ -59,6 +78,9 @@ export default async function MemberDetailPage({
   const m = member as TeamMember;
   const linkedProfile = (allProfiles as Profile[] | null)?.find((p) => p.id === m.profile_id);
   const selectedProjectIds = new Set((memberProjects ?? []).map((mp) => mp.project_id));
+  const assignedProjects = ((projects ?? []) as Pick<Project, "id" | "name" | "code">[]).filter((p) =>
+    selectedProjectIds.has(p.id),
+  );
   const initialSlots = (availability ?? []).map((a) =>
     encodeSlot(a.day_of_week, a.hour, a.status as AvailabilityStatus),
   );
@@ -67,299 +89,164 @@ export default async function MemberDetailPage({
   const addTrackingWithId = addTrackingEntry.bind(null, id);
   const saveAvailabilityWithId = saveAvailability.bind(null, id);
 
-  return (
-    <div className="max-w-3xl space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-nexa-navy dark:text-white">{m.full_name}</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          {m.position ?? "Sin cargo"} · {m.area ?? "Sin área"}
-        </p>
-      </div>
-
-      <FlashToast success={success} error={error} />
-
-      <nav className="flex flex-wrap gap-1 border-b border-slate-200 pb-2 text-xs dark:border-slate-700">
-        <a href="#datos" className="rounded-md px-2.5 py-1.5 font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
-          Datos
-        </a>
-        <a href="#seguimiento" className="rounded-md px-2.5 py-1.5 font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
-          Seguimiento
-        </a>
-        <a href="#disponibilidad" className="rounded-md px-2.5 py-1.5 font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
-          Disponibilidad
-        </a>
-      </nav>
-
-      <section id="datos" className="scroll-mt-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-        <h2 className="mb-4 text-sm font-semibold text-nexa-navy dark:text-white">
-          Datos del integrante
-        </h2>
+  const informacionTab = (
+    <ReadEditToggle
+      editLabel="Editar información"
+      readView={
+        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label="Teléfono" value={m.phone} />
+          <Field label="Edad" value={m.age} />
+          <Field label="Carrera" value={m.career} />
+          <Field label="Rol de último trabajo" value={m.last_job_role} />
+          <Field
+            label="LinkedIn"
+            value={
+              m.linkedin_url && (
+                <a href={m.linkedin_url} target="_blank" rel="noreferrer" className="text-nexa-blue hover:underline">
+                  Ver perfil
+                </a>
+              )
+            }
+          />
+          <Field label="GitHub" value={m.github_username} />
+          <Field label="Skills" value={m.skills} />
+          <Field label="Área favorita" value={m.favorite_area} />
+        </dl>
+      }
+      editView={
         <form action={updateWithId} className="space-y-4">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
-              Nombre completo{" "}
-              {!isAdmin && <span className="text-xs text-slate-400">(solo un admin lo cambia)</span>}
-            </label>
-            <input
-              name="full_name"
-              defaultValue={m.full_name}
-              required
-              disabled={!isAdmin}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:disabled:bg-slate-800/60 dark:disabled:text-slate-500"
-            />
-          </div>
-
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Correo{" "}
-                {!isAdmin && (
-                  <span className="text-xs text-slate-400">(solo un admin lo cambia)</span>
-                )}
-              </label>
-              <input
-                name="email"
-                type="email"
-                defaultValue={m.email ?? ""}
-                disabled={!isAdmin}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:disabled:bg-slate-800/60 dark:disabled:text-slate-500"
-              />
+              <label className={labelClass}>Teléfono</label>
+              <input name="phone" defaultValue={m.phone ?? ""} className={inputClass} />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Teléfono</label>
-              <input
-                name="phone"
-                defaultValue={m.phone ?? ""}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-              />
+              <label className={labelClass}>Edad</label>
+              <input name="age" type="number" min={0} defaultValue={m.age ?? ""} className={inputClass} />
             </div>
           </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Edad
-              </label>
-              <input
-                name="age"
-                type="number"
-                min={0}
-                defaultValue={m.age ?? ""}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Carrera
-              </label>
-              <select
-                name="career"
-                defaultValue={m.career ?? ""}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-              >
+              <label className={labelClass}>Carrera</label>
+              <select name="career" defaultValue={m.career ?? ""} className={inputClass}>
                 <option value="">Sin especificar</option>
                 {CAREER_OPTIONS.map((c) => (
                   <option key={c} value={c}>
                     {c}
                   </option>
                 ))}
-                {m.career && !CAREER_OPTIONS.includes(m.career) && (
-                  <option value={m.career}>{m.career}</option>
-                )}
+                {m.career && !CAREER_OPTIONS.includes(m.career) && <option value={m.career}>{m.career}</option>}
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Rol de último trabajo
-              </label>
-              <input
-                name="last_job_role"
-                defaultValue={m.last_job_role ?? ""}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-              />
+              <label className={labelClass}>Rol de último trabajo</label>
+              <input name="last_job_role" defaultValue={m.last_job_role ?? ""} className={inputClass} />
             </div>
           </div>
-
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                LinkedIn
-              </label>
-              <input
-                name="linkedin_url"
-                type="url"
-                defaultValue={m.linkedin_url ?? ""}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-              />
+              <label className={labelClass}>LinkedIn</label>
+              <input name="linkedin_url" type="url" defaultValue={m.linkedin_url ?? ""} className={inputClass} />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                GitHub (usuario)
-              </label>
-              <input
-                name="github_username"
-                defaultValue={m.github_username ?? ""}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-              />
+              <label className={labelClass}>GitHub (usuario)</label>
+              <input name="github_username" defaultValue={m.github_username ?? ""} className={inputClass} />
             </div>
           </div>
-
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Skills
-              </label>
-              <input
-                name="skills"
-                defaultValue={m.skills ?? ""}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-              />
+              <label className={labelClass}>Skills</label>
+              <input name="skills" defaultValue={m.skills ?? ""} className={inputClass} />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Área favorita (de su carrera)
-              </label>
-              <input
-                name="favorite_area"
-                defaultValue={m.favorite_area ?? ""}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-              />
+              <label className={labelClass}>Área favorita</label>
+              <input name="favorite_area" defaultValue={m.favorite_area ?? ""} className={inputClass} />
             </div>
           </div>
+          <SubmitButton variant="primary" pendingLabel="Guardando..." className="rounded-md px-4 py-2 text-sm font-medium">
+            Guardar información
+          </SubmitButton>
+        </form>
+      }
+    />
+  );
 
-          <div className="border-t border-slate-100 pt-4 dark:border-slate-700">
-            <div className="mb-2 flex items-center justify-between">
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Proyectos asignados
-              </label>
-              <Link href="/projects" className="text-xs text-nexa-blue hover:underline">
-                + Agregar proyecto nuevo
-              </Link>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {(projects as Pick<Project, "id" | "name" | "code">[] | null)?.map((p) => (
-                <label
-                  key={p.id}
-                  className="flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
-                >
-                  <input
-                    type="checkbox"
-                    name="project_ids"
-                    value={p.id}
-                    defaultChecked={selectedProjectIds.has(p.id)}
-                  />
-                  {p.name}
-                </label>
-              ))}
-              {projects?.length === 0 && (
-                <p className="text-sm text-slate-400">
-                  Todavía no hay proyectos —{" "}
-                  <Link href="/projects" className="text-nexa-blue hover:underline">
-                    crea el primero
-                  </Link>
-                  .
-                </p>
+  const nexaTab = (
+    <ReadEditToggle
+      editLabel="Editar datos de Nexa"
+      readView={
+        <div className="space-y-4">
+          <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Nombre completo" value={m.full_name} />
+            <Field label="Correo" value={m.email} />
+            <Field label="Área en Nexa" value={m.area} />
+            <Field label="Cargo en Nexa" value={m.position} />
+            <Field label="Tipo de colaboración" value={m.collaboration_type} />
+            <Field label="Fecha de ingreso" value={m.join_date} />
+            <Field label="Fecha de salida" value={m.end_date} />
+            <Field label="Estado" value={<StatusBadge status={m.status} label={STATUS_LABELS[m.status]} />} />
+          </dl>
+          {m.notes && <Field label="Notas" value={m.notes} />}
+          <div className="rounded-md border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/40">
+            <p className="text-sm text-slate-700 dark:text-slate-300">
+              Cuenta vinculada:{" "}
+              {linkedProfile ? (
+                <span className="font-medium">{linkedProfile.full_name ?? linkedProfile.email}</span>
+              ) : (
+                <span className="text-slate-400">Sin vincular</span>
               )}
+            </p>
+            {linkedProfile && (
+              <p className="mt-1 text-xs text-slate-400">
+                Rol de acceso: <span className="font-medium">{ROLE_LABELS[linkedProfile.role]}</span> — se
+                asigna desde <strong>Usuarios y roles</strong> en el Gestor de Tickets.
+              </p>
+            )}
+          </div>
+        </div>
+      }
+      editView={
+        <form action={updateWithId} className="space-y-4">
+          <div>
+            <label className={labelClass}>
+              Nombre completo{" "}
+              {!isAdmin && <span className="text-xs text-slate-400">(solo un admin lo cambia)</span>}
+            </label>
+            <input name="full_name" defaultValue={m.full_name} required disabled={!isAdmin} className={inputClass} />
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className={labelClass}>
+                Correo {!isAdmin && <span className="text-xs text-slate-400">(solo un admin lo cambia)</span>}
+              </label>
+              <input name="email" type="email" defaultValue={m.email ?? ""} disabled={!isAdmin} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Área en Nexa</label>
+              <input name="area" defaultValue={m.area ?? ""} className={inputClass} />
             </div>
           </div>
-
-          <div className="grid grid-cols-1 gap-3 border-t border-slate-100 pt-4 dark:border-slate-700 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Área en Nexa</label>
-              <input
-                name="area"
-                defaultValue={m.area ?? ""}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Cargo en Nexa</label>
-              <select
-                name="position"
-                defaultValue={m.position ?? ""}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-              >
+              <label className={labelClass}>Cargo en Nexa</label>
+              <select name="position" defaultValue={m.position ?? ""} className={inputClass}>
                 <option value="">Sin especificar</option>
                 {ROLE_OPTIONS.map((r) => (
                   <option key={r} value={r}>
                     {r}
                   </option>
                 ))}
-                {m.position && !ROLE_OPTIONS.includes(m.position) && (
-                  <option value={m.position}>{m.position}</option>
-                )}
+                {m.position && !ROLE_OPTIONS.includes(m.position) && <option value={m.position}>{m.position}</option>}
               </select>
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Tipo de colaboración
-              </label>
-              <input
-                name="collaboration_type"
-                defaultValue={m.collaboration_type ?? ""}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Estado</label>
-              <select
-                name="status"
-                defaultValue={m.status}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-              >
-                {MEMBER_STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {STATUS_LABELS[s]}
-                  </option>
-                ))}
-              </select>
+              <label className={labelClass}>Tipo de colaboración</label>
+              <input name="collaboration_type" defaultValue={m.collaboration_type ?? ""} className={inputClass} />
             </div>
           </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
-              Cuenta vinculada (login){" "}
-              {!isAdmin && <span className="text-xs text-slate-400">(solo un admin la cambia)</span>}
-            </label>
-            <select
-              name="profile_id"
-              defaultValue={m.profile_id ?? ""}
-              disabled={!isAdmin}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:disabled:bg-slate-800/60 dark:disabled:text-slate-500"
-            >
-              <option value="">Sin vincular</option>
-              {(allProfiles as Pick<Profile, "id" | "email" | "full_name">[] | null)?.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.full_name ?? p.email} ({p.email})
-                </option>
-              ))}
-            </select>
-            <p className="mt-1 text-xs text-slate-400">
-              La cuenta que quede vinculada aquí puede entrar a Equipo Nexa y ver su estado y
-              subir su propio horario en <code>/me</code> — todo lo demás de esta ficha sigue
-              siendo solo tuyo para editar.
-            </p>
-          </div>
-
-          {linkedProfile && (
-            <div className="rounded-md border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/40">
-              <p className="text-sm text-slate-700 dark:text-slate-300">
-                Rol de acceso: <span className="font-medium">{ROLE_LABELS[linkedProfile.role]}</span>
-              </p>
-              <p className="mt-1 text-xs text-slate-400">
-                Esto (Admin, Líder, QA, Developer, Backend, Frontend) se asigna desde{" "}
-                <strong>Usuarios y roles</strong> en el Gestor de Tickets — es la misma cuenta,
-                mismo rol en las dos apps.
-              </p>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+              <label className={labelClass}>
                 Fecha de ingreso{" "}
                 {!isAdmin && <span className="text-xs text-slate-400">(solo un admin la cambia)</span>}
               </label>
@@ -368,125 +255,219 @@ export default async function MemberDetailPage({
                 type="date"
                 defaultValue={m.join_date ?? ""}
                 disabled={!isAdmin}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:disabled:bg-slate-800/60 dark:disabled:text-slate-500"
+                className={inputClass}
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Fecha de salida
-              </label>
-              <input
-                name="end_date"
-                type="date"
-                defaultValue={m.end_date ?? ""}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-              />
+              <label className={labelClass}>Fecha de salida</label>
+              <input name="end_date" type="date" defaultValue={m.end_date ?? ""} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Estado</label>
+              <select name="status" defaultValue={m.status} className={inputClass}>
+                {MEMBER_STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {STATUS_LABELS[s]}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
-
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Notas</label>
-            <textarea
-              name="notes"
-              rows={3}
-              defaultValue={m.notes ?? ""}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-            />
+            <label className={labelClass}>Notas</label>
+            <textarea name="notes" rows={3} defaultValue={m.notes ?? ""} className={inputClass} />
           </div>
-
-          <div className="flex items-center justify-between pt-1">
-            <SubmitButton
-              variant="primary"
-              pendingLabel="Guardando..."
-              className="rounded-md px-4 py-2 text-sm font-medium"
-            >
-              Guardar cambios
-            </SubmitButton>
+          <div>
+            <label className={labelClass}>
+              Cuenta vinculada (login){" "}
+              {!isAdmin && <span className="text-xs text-slate-400">(solo un admin la cambia)</span>}
+            </label>
+            <select name="profile_id" defaultValue={m.profile_id ?? ""} disabled={!isAdmin} className={inputClass}>
+              <option value="">Sin vincular</option>
+              {(allProfiles as Pick<Profile, "id" | "email" | "full_name">[] | null)?.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.full_name ?? p.email} ({p.email})
+                </option>
+              ))}
+            </select>
           </div>
-        </form>
-
-        {isAdmin && (
-          <form
-            action={deleteWithId}
-            className="mt-3 border-t border-slate-100 pt-3 dark:border-slate-700"
-          >
-            <ConfirmSubmitButton
-              confirmMessage={`¿Eliminar a ${m.full_name} del equipo? Esta acción no se puede deshacer.`}
-              className="text-sm text-red-600 hover:underline dark:text-red-400"
-            >
-              Eliminar integrante
-            </ConfirmSubmitButton>
-          </form>
-        )}
-      </section>
-
-      <section id="seguimiento" className="scroll-mt-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-        <h2 className="mb-4 text-sm font-semibold text-nexa-navy dark:text-white">Seguimiento</h2>
-
-        <form action={addTrackingWithId} className="mb-5 space-y-3">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[160px_1fr]">
-            <input
-              name="entry_date"
-              type="date"
-              defaultValue={new Date().toISOString().slice(0, 10)}
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-            />
-            <input
-              name="note"
-              required
-              placeholder="Ej: Reunión 1:1, avance de módulo, feedback..."
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-            />
-          </div>
-          <SubmitButton
-            variant="dark"
-            pendingLabel="Agregando..."
-            className="rounded-md px-3 py-1.5 text-sm font-medium"
-          >
-            + Agregar nota de seguimiento
+          <SubmitButton variant="primary" pendingLabel="Guardando..." className="rounded-md px-4 py-2 text-sm font-medium">
+            Guardar datos de Nexa
           </SubmitButton>
         </form>
+      }
+    />
+  );
 
-        <ul className="space-y-3">
-          {(tracking as TrackingEntry[] | null)?.map((t) => (
-            <li
-              key={t.id}
-              className="rounded-md border border-slate-100 bg-nexa-light/30 p-3 dark:border-slate-700 dark:bg-slate-700/30"
-            >
-              <div className="mb-1 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                <span className="font-medium text-nexa-navy dark:text-blue-300">
-                  {t.entry_date}
+  const proyectosTab = (
+    <ReadEditToggle
+      editLabel="Editar proyectos"
+      readView={
+        assignedProjects.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {assignedProjects.map((p) => (
+              <Link
+                key={p.id}
+                href={`/projects/${p.id}`}
+                className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700 hover:border-nexa-blue/40 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+              >
+                <span className="rounded bg-nexa-light px-1.5 py-0.5 text-xs font-medium text-nexa-blue dark:bg-blue-950/40 dark:text-blue-300">
+                  {p.code}
                 </span>
-                <span>{t.author?.full_name ?? t.author?.email ?? ""}</span>
-              </div>
-              <p className="text-sm text-slate-700 dark:text-slate-200">{t.note}</p>
-            </li>
-          ))}
-          {tracking?.length === 0 && (
-            <p className="py-6 text-center text-sm text-slate-400">
-              Todavía no hay notas de seguimiento para este integrante.
-            </p>
-          )}
-        </ul>
-      </section>
+                {p.name}
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-slate-400">No tiene proyectos asignados todavía.</p>
+        )
+      }
+      editView={
+        <form action={updateWithId} className="space-y-4">
+          <input type="hidden" name="manage_project_ids" value="1" />
+          <div className="flex flex-wrap gap-2">
+            {(projects as Pick<Project, "id" | "name" | "code">[] | null)?.map((p) => (
+              <label
+                key={p.id}
+                className="flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+              >
+                <input type="checkbox" name="project_ids" value={p.id} defaultChecked={selectedProjectIds.has(p.id)} />
+                {p.name}
+              </label>
+            ))}
+            {projects?.length === 0 && (
+              <p className="text-sm text-slate-400">
+                Todavía no hay proyectos —{" "}
+                <Link href="/projects" className="text-nexa-blue hover:underline">
+                  crea el primero
+                </Link>
+                .
+              </p>
+            )}
+          </div>
+          <SubmitButton variant="primary" pendingLabel="Guardando..." className="rounded-md px-4 py-2 text-sm font-medium">
+            Guardar proyectos
+          </SubmitButton>
+        </form>
+      }
+    />
+  );
 
-      <section
-        id="disponibilidad"
-        className="scroll-mt-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800"
-      >
-        <h2 className="mb-1 text-sm font-semibold text-nexa-navy dark:text-white">
-          Disponibilidad horaria
-        </h2>
-        <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
-          Marca cómo suele estar {m.full_name.split(" ")[0]} cada hora: libre, probablemente
-          ocupado, u ocupado. Se usa en{" "}
-          <Link href="/schedule" className="text-nexa-blue hover:underline">
-            Horarios
-          </Link>{" "}
-          para cruzar disponibilidad con el resto del equipo.
-        </p>
-        <AvailabilityGrid initialSlots={initialSlots} onSave={saveAvailabilityWithId} />
-      </section>
+  const horarioTab = (
+    <AvailabilityEditor
+      initialSlots={initialSlots}
+      onSave={saveAvailabilityWithId}
+      ownerFirstName={m.full_name.split(" ")[0]}
+    />
+  );
+
+  const seguimientoTab = (
+    <div>
+      <form action={addTrackingWithId} className="mb-5 space-y-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[160px_1fr]">
+          <input
+            name="entry_date"
+            type="date"
+            defaultValue={new Date().toISOString().slice(0, 10)}
+            className={inputClass}
+          />
+          <input
+            name="note"
+            required
+            placeholder="Ej: Reunión 1:1, avance de módulo, feedback..."
+            className={inputClass}
+          />
+        </div>
+        <SubmitButton variant="dark" pendingLabel="Agregando..." className="rounded-md px-3 py-1.5 text-sm font-medium">
+          + Agregar nota de seguimiento
+        </SubmitButton>
+      </form>
+
+      <ul className="space-y-3">
+        {(tracking as TrackingEntry[] | null)?.map((t) => (
+          <li
+            key={t.id}
+            className="rounded-md border border-slate-100 bg-nexa-light/30 p-3 dark:border-slate-700 dark:bg-slate-700/30"
+          >
+            <div className="mb-1 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+              <span className="font-medium text-nexa-navy dark:text-blue-300">{t.entry_date}</span>
+              <span>{t.author?.full_name ?? t.author?.email ?? ""}</span>
+            </div>
+            <p className="text-sm text-slate-700 dark:text-slate-200">{t.note}</p>
+          </li>
+        ))}
+        {tracking?.length === 0 && (
+          <p className="py-6 text-center text-sm text-slate-400">
+            Todavía no hay notas de seguimiento para este integrante.
+          </p>
+        )}
+      </ul>
+    </div>
+  );
+
+  return (
+    <div className="max-w-3xl space-y-6">
+      <FlashToast success={success} error={error} />
+
+      <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <InitialsAvatar name={m.full_name} size="md" />
+            <div>
+              <h1 className="text-lg font-semibold text-nexa-navy dark:text-white">
+                {m.full_name}
+                {linkedProfile?.role === "lider" && (
+                  <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+                    Líder
+                  </span>
+                )}
+              </h1>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                {m.position ?? "Sin cargo"} · {m.area ?? "Sin área"}
+              </p>
+            </div>
+          </div>
+          <StatusBadge status={m.status} label={STATUS_LABELS[m.status]} />
+        </div>
+
+        {assignedProjects.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {assignedProjects.map((p) => (
+              <span
+                key={p.id}
+                className="rounded bg-nexa-light px-1.5 py-0.5 text-xs font-medium text-nexa-blue dark:bg-blue-950/40 dark:text-blue-300"
+              >
+                {p.code}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {isAdmin && (
+          <div className="mt-4 border-t border-slate-100 pt-3 dark:border-slate-700">
+            <form action={deleteWithId}>
+              <ConfirmSubmitButton
+                confirmMessage={`¿Eliminar a ${m.full_name} del equipo? Esta acción no se puede deshacer.`}
+                className="text-xs text-red-500 hover:underline dark:text-red-400"
+              >
+                Eliminar integrante
+              </ConfirmSubmitButton>
+            </form>
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <Tabs
+          tabs={[
+            { id: "informacion", label: "Información", content: informacionTab },
+            { id: "nexa", label: "Nexa", content: nexaTab },
+            { id: "proyectos", label: "Proyectos", content: proyectosTab },
+            { id: "disponibilidad", label: "Horario", content: horarioTab },
+            { id: "seguimiento", label: "Seguimiento", content: seguimientoTab },
+          ]}
+        />
+      </div>
     </div>
   );
 }

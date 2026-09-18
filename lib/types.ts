@@ -123,10 +123,18 @@ export type AvailabilityStatus = "libre" | "tentativo" | "ocupado";
 
 export const AVAILABILITY_STATUSES: AvailabilityStatus[] = ["libre", "tentativo", "ocupado"];
 
+// UI-facing wording only — the underlying values (libre/tentativo/ocupado)
+// stay as-is everywhere in the data layer so no migration is needed.
 export const AVAILABILITY_LABELS: Record<AvailabilityStatus, string> = {
-  libre: "Libre",
-  tentativo: "Probablemente ocupado",
-  ocupado: "Ocupado",
+  libre: "Disponible",
+  tentativo: "Tal vez",
+  ocupado: "No disponible",
+};
+
+export const AVAILABILITY_DESCRIPTIONS: Record<AvailabilityStatus, string> = {
+  libre: "Normalmente puedes participar.",
+  tentativo: "Depende del día o de otras actividades.",
+  ocupado: "Normalmente no puedes participar.",
 };
 
 export const AVAILABILITY_COLORS: Record<AvailabilityStatus, string> = {
@@ -152,4 +160,32 @@ export function decodeSlot(
   if (Number.isNaN(day_of_week) || Number.isNaN(hour)) return null;
   if (status !== "libre" && status !== "tentativo" && status !== "ocupado") return null;
   return { day_of_week, hour, status };
+}
+
+export type AvailabilityRange = { startHour: number; endHour: number; status: AvailabilityStatus };
+
+// Collapses "08:00 libre, 09:00 libre, 10:00 libre" into one 08:00–11:00
+// range so a whole week reads as a handful of lines instead of up to 112
+// individual cells — used by the "Tu disponibilidad" summary.
+export function mergeHourRanges(cellsForDay: Map<number, AvailabilityStatus>): AvailabilityRange[] {
+  const ranges: AvailabilityRange[] = [];
+  let current: AvailabilityRange | null = null;
+  for (const hour of HOURS) {
+    const status = cellsForDay.get(hour);
+    if (!status) {
+      current = null;
+      continue;
+    }
+    if (current && current.status === status && current.endHour === hour) {
+      current.endHour = hour + 1;
+    } else {
+      current = { startHour: hour, endHour: hour + 1, status };
+      ranges.push(current);
+    }
+  }
+  return ranges;
+}
+
+export function formatHourRange(startHour: number, endHour: number) {
+  return `${String(startHour).padStart(2, "0")}:00–${String(endHour).padStart(2, "0")}:00`;
 }

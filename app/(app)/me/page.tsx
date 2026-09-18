@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireProfile } from "@/lib/auth";
-import AvailabilityGrid from "@/components/AvailabilityGrid";
+import AvailabilityEditor from "@/components/AvailabilityEditor";
 import SubmitButton from "@/components/SubmitButton";
 import FlashToast from "@/components/FlashToast";
 import { StatusBadge } from "@/components/Badge";
@@ -65,21 +65,31 @@ export default async function MePage({
 
   return (
     <div className="max-w-3xl space-y-6">
+      <FlashToast success={success} error={error} />
+
       <div>
-        <h1 className="text-xl font-semibold text-nexa-navy dark:text-white">{m.full_name}</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">Tu ficha en Equipo Nexa</p>
+        <h1 className="text-xl font-semibold text-nexa-navy dark:text-white">Mi disponibilidad</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Indica en qué horarios normalmente puedes participar en reuniones o trabajar con el
+          equipo.
+        </p>
       </div>
 
-      <FlashToast success={success} error={error} />
+      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <AvailabilityEditor initialSlots={initialSlots} onSave={saveMyAvailability} />
+      </section>
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
         <div className="mb-1 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-nexa-navy dark:text-white">
-            Tu estado (solo un admin puede cambiarlo)
+            Tu ficha en Nexa
           </h2>
           <StatusBadge status={m.status} label={STATUS_LABELS[m.status]} />
         </div>
-        <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+        <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
+          {m.full_name} · solo un admin puede cambiar tu estado o fecha de ingreso.
+        </p>
+        <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
           <div>
             <dt className="text-xs uppercase tracking-wide text-slate-400">Área en Nexa</dt>
             <dd className="text-slate-700 dark:text-slate-200">{m.area ?? "Sin asignar"}</dd>
@@ -218,17 +228,6 @@ export default async function MePage({
             Guardar perfil
           </SubmitButton>
         </form>
-      </section>
-
-      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-        <h2 className="mb-1 text-sm font-semibold text-nexa-navy dark:text-white">
-          Tu disponibilidad horaria
-        </h2>
-        <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
-          Marca cómo sueles estar, de lunes a domingo: libre, probablemente ocupado, u ocupado. El
-          admin la usa en Horarios para cruzarla con la del resto del equipo.
-        </p>
-        <AvailabilityGrid initialSlots={initialSlots} onSave={saveMyAvailability} />
       </section>
     </div>
   );

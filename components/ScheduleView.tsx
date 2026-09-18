@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import InitialsAvatar from "./Avatar";
 import EmptyState from "./EmptyState";
+import Modal from "./Modal";
 import {
   AVAILABILITY_LABELS,
   DAY_LABELS,
@@ -38,8 +39,6 @@ type SlotStat = {
   names: Record<CellCategory, string[]>;
 };
 
-// Green shades read "how available", not just "available/not" — three steps
-// inside each of the 3 semantic colors so 2/20 and 9/20 don't look identical.
 const LIBRE_SHADES = [
   "bg-emerald-200 dark:bg-emerald-800/50",
   "bg-emerald-400 dark:bg-emerald-600/70",
@@ -50,7 +49,7 @@ const TENTATIVO_SHADES = [
   "bg-amber-200 dark:bg-amber-800/50",
   "bg-amber-300 dark:bg-amber-700/60",
 ];
-const OCUPADO_CLASS = "bg-red-300 dark:bg-red-800/60";
+const OCUPADO_CLASS = "bg-red-200 dark:bg-red-900/50";
 const NEUTRAL_CLASS = "bg-slate-100 dark:bg-slate-800/60";
 
 function cellClass(ratio: number | null) {
@@ -82,7 +81,9 @@ export default function ScheduleView({
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(members.filter((m) => m.hasSchedule).map((m) => m.id)),
   );
-  const [showMissing, setShowMissing] = useState(false);
+  const [missingModalOpen, setMissingModalOpen] = useState(false);
+  const [teamModalOpen, setTeamModalOpen] = useState(false);
+  const [matrixExpanded, setMatrixExpanded] = useState(false);
   const [openCell, setOpenCell] = useState<string | null>(null);
   const [todayIdx, setTodayIdx] = useState<number | null>(null);
   const [mobileDay, setMobileDay] = useState(0);
@@ -198,176 +199,80 @@ export default function ScheduleView({
     [members, selected],
   );
 
-  const MEDALS = ["🥇", "🥈", "🥉"];
-
   return (
     <div>
-      {/* Header */}
       <div className="mb-5">
         <h1 className="mb-1 text-xl font-semibold text-nexa-navy dark:text-white">
-          Horarios del equipo
+          Disponibilidad del equipo
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          Encuentra los mejores momentos para coordinar al equipo según la disponibilidad
-          registrada.
+          Encuentra los mejores momentos para coordinar reuniones o actividades.
         </p>
       </div>
 
-      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mb-5 grid grid-cols-3 gap-3">
         <MetricCard label="Integrantes" value={members.length} />
-        <MetricCard label="Con horario configurado" value={withScheduleCount} tone="positive" />
-        <MetricCard label="Sin configurar" value={missingMembers.length} tone="warning" />
-        <MetricCard label="Seleccionados" value={selected.size} tone="info" />
+        <MetricCard label="Con horario" value={withScheduleCount} tone="positive" />
+        <MetricCard label="Pendientes" value={missingMembers.length} tone="warning" />
       </div>
 
       {missingMembers.length > 0 && (
-        <div className="mb-5 rounded-lg border border-amber-300/60 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/20">
-          <div className="flex flex-wrap items-center justify-between gap-2 p-3">
-            <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-              ⚠ {missingMembers.length} integrante{missingMembers.length === 1 ? "" : "s"} aún no
-              registr{missingMembers.length === 1 ? "ó" : "aron"} su disponibilidad.
-            </p>
-            <button
-              type="button"
-              onClick={() => setShowMissing((v) => !v)}
-              className="shrink-0 rounded-md border border-amber-300/70 bg-white px-2.5 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-800 dark:bg-slate-800 dark:text-amber-300 dark:hover:bg-amber-950/40"
-            >
-              {showMissing ? "Ocultar" : "Ver integrantes"}
-            </button>
-          </div>
-          {showMissing && (
-            <ul className="flex flex-wrap gap-2 px-3 pb-3">
-              {missingMembers.map((m) => (
-                <li key={m.id}>
-                  <Link
-                    href={`/members/${m.id}#disponibilidad`}
-                    className="flex items-center gap-1.5 rounded-full border border-amber-400/60 bg-white px-2.5 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-800 dark:bg-slate-800 dark:text-amber-300 dark:hover:bg-amber-950/40"
-                  >
-                    <InitialsAvatar name={m.full_name} size="sm" />
-                    {m.full_name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-300/60 bg-amber-50 px-3.5 py-2.5 dark:border-amber-900/40 dark:bg-amber-950/20">
+          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+            {missingMembers.length} integrante{missingMembers.length === 1 ? "" : "s"} todavía no
+            configur{missingMembers.length === 1 ? "ó" : "aron"} su disponibilidad.
+          </p>
+          <button
+            type="button"
+            onClick={() => setMissingModalOpen(true)}
+            className="shrink-0 rounded-md border border-amber-300/70 bg-white px-2.5 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-800 dark:bg-slate-800 dark:text-amber-300 dark:hover:bg-amber-950/40"
+          >
+            Ver integrantes
+          </button>
         </div>
       )}
 
-      {/* Filter / selection panel */}
+      {/* Team selector */}
       <div className="mb-5 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-        <div className="mb-3 flex flex-wrap gap-2">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar integrante..."
-            className="min-w-[180px] flex-1 rounded-md border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-          />
-          <select
-            value={projectFilter}
-            onChange={(e) => setProjectFilter(e.target.value)}
-            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-nexa-blue dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-nexa-navy dark:text-white">
+            Equipo seleccionado
+          </h2>
+          <button
+            type="button"
+            onClick={() => setTeamModalOpen(true)}
+            className="rounded-md border border-nexa-blue/30 bg-nexa-light px-2.5 py-1.5 text-xs font-medium text-nexa-blue transition-colors hover:bg-nexa-blue/20 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-200"
           >
-            <option value="">Todos los proyectos</option>
-            {projects.map((p) => (
-              <option key={p.code} value={p.code}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-nexa-blue dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-          >
-            <option value="todos">Todos los estados</option>
-            <option value="con">Con horario</option>
-            <option value="sin">Sin horario</option>
-          </select>
+            Seleccionar integrantes
+          </button>
         </div>
 
-        <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-slate-100 pb-3 text-xs dark:border-slate-700">
-          <button
-            type="button"
-            onClick={selectAllFiltered}
-            className="rounded-full border border-slate-300 px-2.5 py-1 font-medium text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
-          >
-            Seleccionar todos
-          </button>
-          <button
-            type="button"
-            onClick={selectOnlyConfiguredFiltered}
-            className="rounded-full border border-slate-300 px-2.5 py-1 font-medium text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
-          >
-            Solo con horario
-          </button>
-          <button
-            type="button"
-            onClick={clearSelection}
-            className="rounded-full border border-slate-300 px-2.5 py-1 font-medium text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
-          >
-            Limpiar selección
-          </button>
-          <span className="ml-auto font-medium text-slate-500 dark:text-slate-400">
-            {selected.size} integrante{selected.size === 1 ? "" : "s"} seleccionado
-            {selected.size === 1 ? "" : "s"}
-          </span>
-        </div>
-
-        {selectedMembers.length > 0 && (
-          <div className="mb-3 flex flex-wrap gap-1.5">
-            {selectedMembers.slice(0, 10).map((m) => (
+        {selectedMembers.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {selectedMembers.slice(0, 12).map((m) => (
               <button
                 key={m.id}
                 type="button"
                 onClick={() => toggleMember(m.id)}
                 title="Quitar de la selección"
-                className="flex items-center gap-1 rounded-full border border-nexa-blue/30 bg-nexa-light py-0.5 pl-1 pr-2 text-xs font-medium text-nexa-navy transition-colors hover:bg-nexa-blue/20 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-100"
+                className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 py-0.5 pl-1 pr-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300"
               >
                 <InitialsAvatar name={m.full_name} size="sm" />
                 {m.full_name}
-                <span aria-hidden className="text-nexa-blue/60">
+                <span aria-hidden className="text-slate-400">
                   ✕
                 </span>
               </button>
             ))}
-            {selectedMembers.length > 10 && (
+            {selectedMembers.length > 12 && (
               <span className="flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500 dark:bg-slate-700 dark:text-slate-300">
-                +{selectedMembers.length - 10} más
+                +{selectedMembers.length - 12}
               </span>
             )}
           </div>
+        ) : (
+          <p className="text-sm text-slate-400">Nadie seleccionado todavía.</p>
         )}
-
-        <div className="flex flex-wrap gap-1.5">
-          {filteredMembers.map((m) => {
-            const isSelected = selected.has(m.id);
-            return (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => toggleMember(m.id)}
-                className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs transition-colors ${
-                  isSelected
-                    ? "border-nexa-blue bg-nexa-light text-nexa-navy dark:border-blue-600 dark:bg-blue-950/40 dark:text-blue-100"
-                    : "border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700/40"
-                }`}
-              >
-                <InitialsAvatar name={m.full_name} size="sm" />
-                {m.full_name}
-                {!m.hasSchedule && (
-                  <span
-                    title="Todavía no cargó su horario"
-                    className="h-1.5 w-1.5 rounded-full bg-amber-400"
-                  />
-                )}
-              </button>
-            );
-          })}
-          {filteredMembers.length === 0 && (
-            <p className="text-sm text-slate-400">Ningún integrante coincide con estos filtros.</p>
-          )}
-        </div>
       </div>
 
       {selected.size === 0 ? (
@@ -395,67 +300,242 @@ export default function ScheduleView({
             {selectedConfiguredIds.length} de {selected.size} seleccionados tienen horario
             configurado
             {selected.size - selectedConfiguredIds.length > 0 && (
-              <> · {selected.size - selectedConfiguredIds.length} sin configurar (no se cuentan)</>
+              <> · {selected.size - selectedConfiguredIds.length} pendientes (no se cuentan)</>
             )}
             .
           </p>
 
-          {bestSlots.length > 0 && (
-            <div className="mb-5 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-              <h2 className="mb-3 text-sm font-semibold text-nexa-navy dark:text-white">
-                Mejores horarios para coordinar
-              </h2>
-              <ul className="flex flex-wrap gap-4">
-                {bestSlots.map((s, i) => (
-                  <li key={s.key} className="flex items-center gap-2 text-sm">
-                    <span aria-hidden className="text-lg">
-                      {MEDALS[i]}
-                    </span>
-                    <span className="font-medium text-slate-700 dark:text-slate-200">
-                      {DAY_LABELS[s.day]} {String(s.hour).padStart(2, "0")}:00
-                    </span>
-                    <span className="text-slate-400">— {s.libre} disponibles</span>
-                  </li>
+          <div className="mb-5">
+            <h2 className="mb-3 text-sm font-semibold text-nexa-navy dark:text-white">
+              Mejores momentos esta semana
+            </h2>
+            {bestSlots.length === 0 ? (
+              <p className="text-sm text-slate-400">
+                Nadie del equipo seleccionado marcó disponibilidad todavía.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                {bestSlots.map((s) => (
+                  <button
+                    key={s.key}
+                    type="button"
+                    onClick={() => {
+                      setMatrixExpanded(true);
+                      setOpenCell(s.key);
+                      setMobileDay(s.day);
+                    }}
+                    className="rounded-lg border border-slate-200 bg-white p-3.5 text-left shadow-sm transition-colors hover:border-nexa-blue/40 dark:border-slate-700 dark:bg-slate-800"
+                  >
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                      {DAY_LABELS[s.day]}
+                    </p>
+                    <p className="mt-0.5 text-sm font-semibold text-nexa-navy dark:text-white">
+                      {String(s.hour).padStart(2, "0")}:00 – {String(s.hour + 1).padStart(2, "0")}:00
+                    </p>
+                    <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">
+                      {s.libre} disponible{s.libre === 1 ? "" : "s"}
+                    </p>
+                  </button>
                 ))}
-              </ul>
-            </div>
-          )}
-
-          <Legend />
-
-          {/* Desktop matrix */}
-          <div className="hidden md:block">
-            <DesktopMatrix
-              slotStats={slotStats}
-              configuredCount={selectedConfiguredIds.length}
-              todayIdx={todayIdx}
-              openCell={openCell}
-              onCellClick={(key) => setOpenCell((prev) => (prev === key ? null : key))}
-            />
+              </div>
+            )}
           </div>
 
-          {/* Mobile: one day at a time */}
-          <div className="md:hidden">
-            <MobileDayView
-              day={mobileDay}
-              onDayChange={setMobileDay}
-              slotStats={slotStats}
-              configuredCount={selectedConfiguredIds.length}
-              todayIdx={todayIdx}
-              openCell={openCell}
-              onCellClick={(key) => setOpenCell((prev) => (prev === key ? null : key))}
-            />
-          </div>
+          <button
+            type="button"
+            onClick={() => setMatrixExpanded((v) => !v)}
+            className="mb-4 rounded-md border border-slate-200 px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700/40"
+          >
+            {matrixExpanded ? "Ocultar disponibilidad completa" : "Ver disponibilidad completa"}
+          </button>
 
-          {openCell && (
-            <CellDetail
-              cellKey={openCell}
-              stat={slotStats.get(openCell)!}
-              onClose={() => setOpenCell(null)}
-            />
+          {matrixExpanded && (
+            <>
+              <Legend />
+
+              <div className="hidden md:block">
+                <DesktopMatrix
+                  slotStats={slotStats}
+                  configuredCount={selectedConfiguredIds.length}
+                  todayIdx={todayIdx}
+                  openCell={openCell}
+                  onCellClick={(key) => setOpenCell((prev) => (prev === key ? null : key))}
+                />
+              </div>
+
+              <div className="md:hidden">
+                <MobileDayView
+                  day={mobileDay}
+                  onDayChange={setMobileDay}
+                  slotStats={slotStats}
+                  configuredCount={selectedConfiguredIds.length}
+                  todayIdx={todayIdx}
+                  openCell={openCell}
+                  onCellClick={(key) => setOpenCell((prev) => (prev === key ? null : key))}
+                />
+              </div>
+
+              {openCell && (
+                <CellDetail
+                  cellKey={openCell}
+                  stat={slotStats.get(openCell)!}
+                  onClose={() => setOpenCell(null)}
+                />
+              )}
+            </>
           )}
         </>
       )}
+
+      {/* Missing schedule modal */}
+      <Modal
+        open={missingModalOpen}
+        onClose={() => setMissingModalOpen(false)}
+        title={`${missingMembers.length} integrantes pendientes`}
+      >
+        <ul className="flex flex-wrap gap-2">
+          {missingMembers.map((m) => (
+            <li key={m.id}>
+              <Link
+                href={`/members/${m.id}#disponibilidad`}
+                className="flex items-center gap-1.5 rounded-full border border-amber-300/60 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-300"
+              >
+                <InitialsAvatar name={m.full_name} size="sm" />
+                {m.full_name}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </Modal>
+
+      {/* Team selection modal (filters live here too, so there's one place to both narrow and pick people) */}
+      <Modal open={teamModalOpen} onClose={() => setTeamModalOpen(false)} title="Seleccionar integrantes" size="md">
+        <FiltersForm
+          search={search}
+          setSearch={setSearch}
+          projectFilter={projectFilter}
+          setProjectFilter={setProjectFilter}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          projects={projects}
+        />
+
+        <div className="my-3 flex flex-wrap items-center gap-2 border-y border-slate-100 py-2.5 text-xs dark:border-slate-700">
+          <button
+            type="button"
+            onClick={selectAllFiltered}
+            className="rounded-full border border-slate-300 px-2.5 py-1 font-medium text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+          >
+            Seleccionar todos
+          </button>
+          <button
+            type="button"
+            onClick={selectOnlyConfiguredFiltered}
+            className="rounded-full border border-slate-300 px-2.5 py-1 font-medium text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+          >
+            Solo con horario
+          </button>
+          <button
+            type="button"
+            onClick={clearSelection}
+            className="rounded-full border border-slate-300 px-2.5 py-1 font-medium text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+          >
+            Limpiar
+          </button>
+          <span className="ml-auto font-medium text-slate-500 dark:text-slate-400">
+            {selected.size} seleccionado{selected.size === 1 ? "" : "s"}
+          </span>
+        </div>
+
+        <div className="max-h-72 space-y-1 overflow-y-auto">
+          {filteredMembers.map((m) => {
+            const isSelected = selected.has(m.id);
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => toggleMember(m.id)}
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/40"
+              >
+                <span
+                  className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                    isSelected
+                      ? "border-nexa-blue bg-nexa-blue text-white"
+                      : "border-slate-300 dark:border-slate-600"
+                  }`}
+                >
+                  {isSelected && (
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                      <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </span>
+                <InitialsAvatar name={m.full_name} size="sm" />
+                <span className="flex-1 text-slate-700 dark:text-slate-200">{m.full_name}</span>
+                {!m.hasSchedule && (
+                  <span title="Sin horario" className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                )}
+              </button>
+            );
+          })}
+          {filteredMembers.length === 0 && (
+            <p className="py-4 text-center text-sm text-slate-400">
+              Ningún integrante coincide con estos filtros.
+            </p>
+          )}
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+function FiltersForm({
+  search,
+  setSearch,
+  projectFilter,
+  setProjectFilter,
+  statusFilter,
+  setStatusFilter,
+  projects,
+}: {
+  search: string;
+  setSearch: (v: string) => void;
+  projectFilter: string;
+  setProjectFilter: (v: string) => void;
+  statusFilter: "todos" | "con" | "sin";
+  setStatusFilter: (v: "todos" | "con" | "sin") => void;
+  projects: { code: string; name: string }[];
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <input
+        type="text"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="🔍 Buscar integrante..."
+        className="min-w-[180px] flex-1 rounded-md border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+      />
+      <select
+        value={projectFilter}
+        onChange={(e) => setProjectFilter(e.target.value)}
+        className="rounded-md border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-nexa-blue dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+      >
+        <option value="">Proyecto: Todos</option>
+        {projects.map((p) => (
+          <option key={p.code} value={p.code}>
+            {p.name}
+          </option>
+        ))}
+      </select>
+      <select
+        value={statusFilter}
+        onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+        className="rounded-md border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-nexa-blue dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+      >
+        <option value="todos">Estado: Todos</option>
+        <option value="con">Con horario</option>
+        <option value="sin">Sin horario</option>
+      </select>
     </div>
   );
 }
@@ -467,20 +547,17 @@ function MetricCard({
 }: {
   label: string;
   value: number;
-  tone?: "neutral" | "positive" | "warning" | "info";
+  tone?: "neutral" | "positive" | "warning";
 }) {
   const TONE_STYLES = {
     neutral: "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800",
-    positive:
-      "border-emerald-100 bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-950/30",
+    positive: "border-emerald-100 bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-950/30",
     warning: "border-amber-100 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30",
-    info: "border-nexa-blue/20 bg-nexa-light dark:border-blue-900/40 dark:bg-blue-950/20",
   } as const;
   const VALUE_STYLES = {
     neutral: "text-nexa-navy dark:text-white",
     positive: "text-emerald-700 dark:text-emerald-300",
     warning: "text-amber-700 dark:text-amber-300",
-    info: "text-nexa-blue dark:text-blue-300",
   } as const;
   return (
     <div className={`rounded-lg border p-3.5 ${TONE_STYLES[tone]}`}>
@@ -497,10 +574,8 @@ function Legend() {
       <LegendDot className="bg-emerald-400 dark:bg-emerald-500" label="Alta disponibilidad" />
       <LegendDot className="bg-amber-300 dark:bg-amber-600" label="Disponibilidad parcial" />
       <LegendDot className="bg-red-300 dark:bg-red-800" label="Sin disponibilidad" />
-      <LegendDot className="bg-slate-200 dark:bg-slate-700" label="Sin datos" />
-      <span className="text-slate-400">
-        Cada celda: libres / integrantes seleccionados con horario configurado.
-      </span>
+      <LegendDot className="bg-slate-200 dark:bg-slate-700" label="Sin horario" />
+      <span className="text-slate-400">Cada celda: disponibles de los integrantes con horario configurado.</span>
     </div>
   );
 }
@@ -514,7 +589,7 @@ function LegendDot({ className, label }: { className: string; label: string }) {
 }
 
 function cellTitle(dayLabel: string, hour: number, stat: SlotStat) {
-  return `${dayLabel} ${String(hour).padStart(2, "0")}:00\n${stat.libre} disponibles\n${stat.tentativo} probablemente ocupados\n${stat.ocupado} ocupados\n${stat.sinDatos} sin datos`;
+  return `${dayLabel} ${String(hour).padStart(2, "0")}:00\n${stat.libre} disponibles\n${stat.tentativo} tal vez\n${stat.ocupado} no disponibles\n${stat.sinDatos} sin horario`;
 }
 
 function DesktopMatrix({
@@ -531,15 +606,15 @@ function DesktopMatrix({
   onCellClick: (key: string) => void;
 }) {
   return (
-    <div className="max-h-[70vh] overflow-auto rounded-lg border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-950/40">
-      <table className="w-full min-w-[760px] border-separate border-spacing-0 text-xs">
+    <div className="mb-4 max-h-[70vh] overflow-auto rounded-lg border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-950/40">
+      <table className="w-full min-w-[820px] border-separate border-spacing-0 text-xs">
         <thead className="sticky top-0 z-10">
           <tr>
             <th className="sticky left-0 z-20 w-16 bg-slate-50 dark:bg-slate-950/40"></th>
             {DAY_LABELS.map((d, i) => (
               <th key={d} className="bg-slate-50 pb-2 pt-2 text-center dark:bg-slate-950/40">
                 <div
-                  className={`mx-auto flex w-16 flex-col items-center rounded-lg px-1 py-1 ${
+                  className={`mx-auto flex w-20 flex-col items-center rounded-lg px-1 py-1 ${
                     todayIdx === i
                       ? "bg-amber-400 text-nexa-navy dark:bg-amber-500 dark:text-slate-900"
                       : "text-slate-500 dark:text-slate-400"
@@ -571,7 +646,7 @@ function DesktopMatrix({
                 return (
                   <td
                     key={key}
-                    className={`h-10 w-16 border-l border-slate-200 text-center dark:border-slate-700 ${
+                    className={`h-11 w-20 border-l border-slate-200 text-center dark:border-slate-700 ${
                       rowIdx === 0 ? "" : "border-t border-dashed border-slate-300 dark:border-slate-700"
                     }`}
                   >
@@ -579,9 +654,10 @@ function DesktopMatrix({
                       type="button"
                       title={cellTitle(dayLabel, h, stat)}
                       onClick={() => onCellClick(key)}
-                      className={`m-0.5 flex h-[calc(100%-4px)] w-[calc(100%-4px)] flex-col items-center justify-center rounded-md font-medium text-nexa-navy transition-transform hover:scale-[1.04] dark:text-white ${cellClass(ratio)} ${isOpen ? "ring-2 ring-nexa-blue" : ""}`}
+                      className={`m-0.5 flex h-[calc(100%-4px)] w-[calc(100%-4px)] flex-col items-center justify-center rounded-md leading-tight text-nexa-navy transition-transform hover:scale-[1.04] dark:text-white ${cellClass(ratio)} ${isOpen ? "ring-2 ring-nexa-blue" : ""}`}
                     >
-                      <span>{stat.libre}/{configuredCount}</span>
+                      <span className="text-xs font-semibold">{stat.libre} disp.</span>
+                      <span className="text-[9px] opacity-70">de {configuredCount}</span>
                     </button>
                   </td>
                 );
@@ -612,7 +688,7 @@ function MobileDayView({
   onCellClick: (key: string) => void;
 }) {
   return (
-    <div>
+    <div className="mb-4">
       <div className="mb-3 flex items-center gap-1 overflow-x-auto pb-1">
         {DAY_LABELS.map((d, i) => (
           <button
@@ -650,7 +726,7 @@ function MobileDayView({
               <span
                 className={`rounded-md px-2.5 py-1 text-xs font-semibold text-nexa-navy dark:text-white ${cellClass(ratio)}`}
               >
-                {stat.libre}/{configuredCount} libres
+                {stat.libre} disp. de {configuredCount}
               </span>
             </button>
           );
@@ -677,20 +753,16 @@ function CellDetail({
     { category: "libre", label: AVAILABILITY_LABELS.libre, dot: "bg-emerald-400" },
     { category: "tentativo", label: AVAILABILITY_LABELS.tentativo, dot: "bg-amber-300" },
     { category: "ocupado", label: AVAILABILITY_LABELS.ocupado, dot: "bg-red-400" },
-    { category: "sinDatos", label: "Sin datos", dot: "bg-slate-300" },
+    { category: "sinDatos", label: "Sin horario", dot: "bg-slate-300" },
   ];
 
   return (
     <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-nexa-navy dark:text-white">
-          {DAY_LABELS[day]} {String(hour).padStart(2, "0")}:00
+          {DAY_LABELS[day]} · {String(hour).padStart(2, "0")}:00
         </h2>
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-xs text-nexa-blue hover:underline"
-        >
+        <button type="button" onClick={onClose} className="text-xs text-nexa-blue hover:underline">
           Cerrar detalle
         </button>
       </div>
@@ -698,8 +770,7 @@ function CellDetail({
         {GROUPS.filter((g) => stat.names[g.category].length > 0).map((g) => (
           <div key={g.category}>
             <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
-              <span className={`h-2 w-2 rounded-full ${g.dot}`} /> {g.label} (
-              {stat.names[g.category].length})
+              <span className={`h-2 w-2 rounded-full ${g.dot}`} /> {g.label} ({stat.names[g.category].length})
             </p>
             <div className="flex flex-wrap gap-1.5">
               {stat.names[g.category].map((name) => (
