@@ -2,7 +2,9 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdminOrLeader } from "@/lib/auth";
 import { StatusBadge } from "@/components/Badge";
-import SuccessBanner from "@/components/SuccessBanner";
+import FlashToast from "@/components/FlashToast";
+import Alert from "@/components/Alert";
+import EmptyState from "@/components/EmptyState";
 import { MEMBER_STATUSES, STATUS_LABELS, type Profile, type TeamMember } from "@/lib/types";
 
 export default async function DashboardPage({
@@ -15,7 +17,7 @@ export default async function DashboardPage({
   const supabase = await createClient();
 
   const [{ data: allMembers }, { data: profiles }, { data: memberProjects }] = await Promise.all([
-    supabase.from("team_members").select("status, email"),
+    supabase.from("team_members").select("id, status, email"),
     supabase.from("profiles").select("id, email, full_name, role, created_at"),
     supabase.from("team_member_projects").select("member_id, project:projects(name, code)"),
   ]);
@@ -46,7 +48,7 @@ export default async function DashboardPage({
 
   let query = supabase
     .from("team_members")
-    .select("*")
+    .select("id, full_name, area, career, position, join_date, status, profile_id")
     .order("join_date", { ascending: false, nullsFirst: false })
     .order("full_name", { ascending: true });
 
@@ -57,7 +59,7 @@ export default async function DashboardPage({
 
   return (
     <div>
-      {success && <SuccessBanner message={success} />}
+      <FlashToast success={success} />
 
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -114,8 +116,8 @@ export default async function DashboardPage({
       </div>
 
       {unlinkedProfiles.length > 0 && (
-        <div className="mb-6 rounded-lg border border-nexa-blue/30 bg-nexa-light/60 p-4 dark:border-blue-900/40 dark:bg-blue-950/20">
-          <p className="mb-2 text-sm font-medium text-nexa-navy dark:text-blue-100">
+        <Alert variant="info" className="mb-6">
+          <p className="mb-2 font-medium text-nexa-navy dark:text-blue-100">
             {unlinkedProfiles.length} cuenta{unlinkedProfiles.length === 1 ? "" : "s"} registrada
             {unlinkedProfiles.length === 1 ? "" : "s"} en el Gestor de Tickets todavía sin
             integrante en Equipo Nexa
@@ -138,7 +140,7 @@ export default async function DashboardPage({
               </li>
             ))}
           </ul>
-        </div>
+        </Alert>
       )}
 
       <form className="mb-5 flex flex-wrap gap-2 text-sm" action="/dashboard">
@@ -177,87 +179,143 @@ export default async function DashboardPage({
       </form>
 
       {error && (
-        <p className="rounded-md bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
+        <Alert variant="danger" className="mb-4">
           Error cargando integrantes: {error.message}
-        </p>
+        </Alert>
       )}
 
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="border-b border-slate-200 bg-nexa-light/50 text-xs uppercase tracking-wide text-nexa-navy/70 dark:border-slate-700 dark:bg-slate-700/40 dark:text-slate-300">
-              <tr>
-                <th className="px-4 py-2 font-medium">Nombre</th>
-                <th className="px-4 py-2 font-medium">Área</th>
-                <th className="px-4 py-2 font-medium">Cargo</th>
-                <th className="px-4 py-2 font-medium">Proyectos</th>
-                <th className="px-4 py-2 font-medium">Ingreso</th>
-                <th className="px-4 py-2 font-medium">Estado</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-              {(members as TeamMember[] | null)?.map((m) => (
-                <tr
-                  key={m.id}
-                  className="transition-colors hover:bg-nexa-light/30 dark:hover:bg-slate-700/40"
-                >
-                  <td className="px-4 py-2.5">
-                    <Link
-                      href={`/members/${m.id}`}
-                      className="font-medium text-slate-800 hover:text-nexa-blue hover:underline dark:text-slate-100"
+      {members?.length === 0 ? (
+        <EmptyState
+          title="No hay integrantes con estos filtros."
+          description="Prueba con otro nombre, área o estado."
+          action={
+            (status || q) && (
+              <Link
+                href="/dashboard"
+                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                Limpiar filtros
+              </Link>
+            )
+          }
+        />
+      ) : (
+        <>
+          {/* Desktop table */}
+          <div className="hidden overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800 md:block">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] text-left text-sm">
+                <thead className="border-b border-slate-200 bg-nexa-light/50 text-xs uppercase tracking-wide text-nexa-navy/70 dark:border-slate-700 dark:bg-slate-700/40 dark:text-slate-300">
+                  <tr>
+                    <th className="px-4 py-2 font-medium">Nombre</th>
+                    <th className="px-4 py-2 font-medium">Área</th>
+                    <th className="px-4 py-2 font-medium">Cargo</th>
+                    <th className="px-4 py-2 font-medium">Proyectos</th>
+                    <th className="px-4 py-2 font-medium">Ingreso</th>
+                    <th className="px-4 py-2 font-medium">Estado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                  {(members as TeamMember[] | null)?.map((m) => (
+                    <tr
+                      key={m.id}
+                      className="transition-colors hover:bg-nexa-light/30 dark:hover:bg-slate-700/40"
                     >
-                      {m.full_name}
-                    </Link>
-                    {m.profile_id && roleByProfileId.get(m.profile_id) === "lider" && (
-                      <span
-                        title="Líder"
-                        className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
-                      >
-                        Líder
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">
-                    {m.area ?? m.career ?? "—"}
-                  </td>
-                  <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">
-                    {m.position ?? "—"}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    {(projectsByMember.get(m.id) ?? []).length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
-                        {projectsByMember.get(m.id)!.map((code) => (
+                      <td className="px-4 py-2.5">
+                        <Link
+                          href={`/members/${m.id}`}
+                          className="font-medium text-slate-800 hover:text-nexa-blue hover:underline dark:text-slate-100"
+                        >
+                          {m.full_name}
+                        </Link>
+                        {m.profile_id && roleByProfileId.get(m.profile_id) === "lider" && (
                           <span
-                            key={code}
-                            className="rounded bg-nexa-light px-1.5 py-0.5 text-xs font-medium text-nexa-blue dark:bg-blue-950/40 dark:text-blue-300"
+                            title="Líder"
+                            className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
                           >
-                            {code}
+                            Líder
                           </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-slate-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">
-                    {m.join_date ?? "—"}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <StatusBadge status={m.status} label={STATUS_LABELS[m.status]} />
-                  </td>
-                </tr>
-              ))}
-              {members?.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-slate-400">
-                    No hay integrantes con estos filtros.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">
+                        {m.area ?? m.career ?? "—"}
+                      </td>
+                      <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">
+                        {m.position ?? "—"}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        {(projectsByMember.get(m.id) ?? []).length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {projectsByMember.get(m.id)!.map((code) => (
+                              <span
+                                key={code}
+                                className="rounded bg-nexa-light px-1.5 py-0.5 text-xs font-medium text-nexa-blue dark:bg-blue-950/40 dark:text-blue-300"
+                              >
+                                {code}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">
+                        {m.join_date ?? "—"}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <StatusBadge status={m.status} label={STATUS_LABELS[m.status]} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="space-y-2 md:hidden">
+            {(members as TeamMember[] | null)?.map((m) => (
+              <Link
+                key={m.id}
+                href={`/members/${m.id}`}
+                className="block rounded-lg border border-slate-200 bg-white p-4 shadow-sm active:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:active:bg-slate-700/40"
+              >
+                <div className="mb-1 flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-medium text-slate-800 dark:text-slate-100">
+                      {m.full_name}
+                      {m.profile_id && roleByProfileId.get(m.profile_id) === "lider" && (
+                        <span className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+                          Líder
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {m.position ?? "Sin cargo"}
+                    </p>
+                  </div>
+                  <StatusBadge status={m.status} label={STATUS_LABELS[m.status]} />
+                </div>
+                <p className="mb-2 text-xs text-slate-500 dark:text-slate-400">
+                  {m.area ?? m.career ?? "Sin área"}
+                </p>
+                {(projectsByMember.get(m.id) ?? []).length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {projectsByMember.get(m.id)!.map((code) => (
+                      <span
+                        key={code}
+                        className="rounded bg-nexa-light px-1.5 py-0.5 text-xs font-medium text-nexa-blue dark:bg-blue-950/40 dark:text-blue-300"
+                      >
+                        {code}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

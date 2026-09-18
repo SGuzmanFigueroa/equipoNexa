@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 import SubmitButton from "@/components/SubmitButton";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
-import SuccessBanner from "@/components/SuccessBanner";
+import FlashToast from "@/components/FlashToast";
+import EmptyState from "@/components/EmptyState";
 import { createProject, deleteProject } from "./actions";
 import type { Project } from "@/lib/types";
 
@@ -34,12 +35,7 @@ export default async function ProjectsPage({
         Gestor de Tickets (mismas apps).
       </p>
 
-      {success && <SuccessBanner message={success} />}
-      {error && (
-        <p className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
-          {error}
-        </p>
-      )}
+      <FlashToast success={success} error={error} />
 
       <form
         action={createProject}
@@ -126,7 +122,10 @@ export default async function ProjectsPage({
           </div>
         ))}
         {projects?.length === 0 && (
-          <p className="text-sm text-slate-400">Todavía no hay proyectos.</p>
+          <EmptyState
+            title="Todavía no hay proyectos."
+            description="Crea el primero con el formulario de arriba."
+          />
         )}
       </div>
     </div>

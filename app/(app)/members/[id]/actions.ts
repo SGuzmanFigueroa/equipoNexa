@@ -105,7 +105,11 @@ export async function saveAvailability(memberId: string, slots: string[]) {
   await requireAdminOrLeader();
   const supabase = await createClient();
 
-  await supabase.from("team_member_availability").delete().eq("member_id", memberId);
+  const { error: deleteError } = await supabase
+    .from("team_member_availability")
+    .delete()
+    .eq("member_id", memberId);
+  if (deleteError) throw new Error(deleteError.message);
 
   const rows = slots
     .map(decodeSlot)
@@ -113,6 +117,7 @@ export async function saveAvailability(memberId: string, slots: string[]) {
     .map((s) => ({ member_id: memberId, ...s }));
 
   if (rows.length > 0) {
-    await supabase.from("team_member_availability").insert(rows);
+    const { error: insertError } = await supabase.from("team_member_availability").insert(rows);
+    if (insertError) throw new Error(insertError.message);
   }
 }

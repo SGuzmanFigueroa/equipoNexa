@@ -66,9 +66,13 @@ export async function saveMyAvailability(slots: string[]) {
     .eq("profile_id", profile.id)
     .single();
 
-  if (!member) return;
+  if (!member) throw new Error("No estás vinculado a ninguna ficha de integrante.");
 
-  await supabase.from("team_member_availability").delete().eq("member_id", member.id);
+  const { error: deleteError } = await supabase
+    .from("team_member_availability")
+    .delete()
+    .eq("member_id", member.id);
+  if (deleteError) throw new Error(deleteError.message);
 
   const rows = slots
     .map(decodeSlot)
@@ -76,6 +80,7 @@ export async function saveMyAvailability(slots: string[]) {
     .map((s) => ({ member_id: member.id, ...s }));
 
   if (rows.length > 0) {
-    await supabase.from("team_member_availability").insert(rows);
+    const { error: insertError } = await supabase.from("team_member_availability").insert(rows);
+    if (insertError) throw new Error(insertError.message);
   }
 }

@@ -4,7 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 import { StatusBadge } from "@/components/Badge";
 import SubmitButton from "@/components/SubmitButton";
-import SuccessBanner from "@/components/SuccessBanner";
+import FlashToast from "@/components/FlashToast";
+import EmptyState from "@/components/EmptyState";
 import { makeLeader } from "./actions";
 import { ROLE_LABELS, STATUS_LABELS, type MemberStatus, type UserRole } from "@/lib/types";
 
@@ -70,12 +71,7 @@ export default async function ProjectDetailPage({
         </div>
       </div>
 
-      {success && <SuccessBanner message={success} />}
-      {error && (
-        <p className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
-          {error}
-        </p>
-      )}
+      <FlashToast success={success} error={error} />
 
       <h2 className="mb-2 text-sm font-semibold text-nexa-navy dark:text-white">
         Equipo asignado ({members.length})
@@ -125,10 +121,10 @@ export default async function ProjectDetailPage({
           );
         })}
         {members.length === 0 && (
-          <p className="text-sm text-slate-400">
-            Todavía no hay nadie asignado a este proyecto. Asígnalo desde la ficha de cada
-            integrante.
-          </p>
+          <EmptyState
+            title="Este proyecto todavía no tiene integrantes asignados."
+            description="Asígnalo desde la ficha de cada integrante."
+          />
         )}
       </div>
     </div>

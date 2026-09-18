@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAdminOrLeader } from "@/lib/auth";
 import SubmitButton from "@/components/SubmitButton";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
-import SuccessBanner from "@/components/SuccessBanner";
+import FlashToast from "@/components/FlashToast";
 import AvailabilityGrid from "@/components/AvailabilityGrid";
 import { updateMember, deleteMember, addTrackingEntry, saveAvailability } from "./actions";
 import {
@@ -76,14 +76,21 @@ export default async function MemberDetailPage({
         </p>
       </div>
 
-      {success && <SuccessBanner message={success} />}
-      {error && (
-        <p className="rounded-md bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
-          {error}
-        </p>
-      )}
+      <FlashToast success={success} error={error} />
 
-      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+      <nav className="flex flex-wrap gap-1 border-b border-slate-200 pb-2 text-xs dark:border-slate-700">
+        <a href="#datos" className="rounded-md px-2.5 py-1.5 font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
+          Datos
+        </a>
+        <a href="#seguimiento" className="rounded-md px-2.5 py-1.5 font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
+          Seguimiento
+        </a>
+        <a href="#disponibilidad" className="rounded-md px-2.5 py-1.5 font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
+          Disponibilidad
+        </a>
+      </nav>
+
+      <section id="datos" className="scroll-mt-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
         <h2 className="mb-4 text-sm font-semibold text-nexa-navy dark:text-white">
           Datos del integrante
         </h2>
@@ -413,7 +420,7 @@ export default async function MemberDetailPage({
         )}
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+      <section id="seguimiento" className="scroll-mt-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
         <h2 className="mb-4 text-sm font-semibold text-nexa-navy dark:text-white">Seguimiento</h2>
 
         <form action={addTrackingWithId} className="mb-5 space-y-3">

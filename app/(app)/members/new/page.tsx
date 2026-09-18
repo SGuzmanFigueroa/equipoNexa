@@ -1,5 +1,6 @@
 import Link from "next/link";
 import SubmitButton from "@/components/SubmitButton";
+import Alert from "@/components/Alert";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdminOrLeader } from "@/lib/auth";
 import { createMember } from "./actions";
@@ -28,15 +29,15 @@ export default async function NewMemberPage({
       </p>
 
       {error && (
-        <p className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
+        <Alert variant="danger" className="mb-4">
           {error}
-        </p>
+        </Alert>
       )}
       {(full_name || email) && (
-        <p className="mb-4 rounded-md bg-nexa-light p-3 text-sm text-nexa-blue dark:bg-blue-950/30 dark:text-blue-300">
+        <Alert variant="info" className="mb-4">
           Datos precargados desde una cuenta ya registrada en el Gestor de Tickets — revisa y
           completa el resto.
-        </p>
+        </Alert>
       )}
 
       <form

@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireProfile } from "@/lib/auth";
 import AvailabilityGrid from "@/components/AvailabilityGrid";
 import SubmitButton from "@/components/SubmitButton";
-import SuccessBanner from "@/components/SuccessBanner";
+import FlashToast from "@/components/FlashToast";
 import { StatusBadge } from "@/components/Badge";
 import { saveMyAvailability, updateMyProfile } from "./actions";
 import {
@@ -70,12 +70,7 @@ export default async function MePage({
         <p className="text-sm text-slate-500 dark:text-slate-400">Tu ficha en Equipo Nexa</p>
       </div>
 
-      {success && <SuccessBanner message={success} />}
-      {error && (
-        <p className="rounded-md bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
-          {error}
-        </p>
-      )}
+      <FlashToast success={success} error={error} />
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
         <div className="mb-1 flex items-center justify-between">
