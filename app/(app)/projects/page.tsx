@@ -2,10 +2,9 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 import SubmitButton from "@/components/SubmitButton";
-import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import FlashToast from "@/components/FlashToast";
 import EmptyState from "@/components/EmptyState";
-import Menu from "@/components/Menu";
+import ProjectCardMenu from "@/components/ProjectCardMenu";
 import { createProject, deleteProject } from "./actions";
 import type { Project } from "@/lib/types";
 
@@ -119,30 +118,7 @@ export default async function ProjectsPage({
               <span className="flex h-9 w-9 items-center justify-center rounded-md bg-nexa-light text-xs font-semibold text-nexa-blue dark:bg-blue-950/40 dark:text-blue-300">
                 {p.code}
               </span>
-              <Menu
-                align="right"
-                trigger={
-                  <button
-                    type="button"
-                    aria-label="Más opciones"
-                    className="flex h-8 w-8 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-200"
-                  >
-                    •••
-                  </button>
-                }
-              >
-                {() => (
-                  <form action={deleteProject}>
-                    <input type="hidden" name="id" value={p.id} />
-                    <ConfirmSubmitButton
-                      confirmMessage={`¿Eliminar el proyecto "${p.name}"? Esto también borra sus asignaciones de integrantes y, como esta tabla es compartida, cualquier ticket del Gestor de Tickets que pertenezca a este proyecto. No se puede deshacer.`}
-                      className="flex w-full items-center px-3 py-1.5 text-left text-red-500 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
-                    >
-                      Eliminar proyecto
-                    </ConfirmSubmitButton>
-                  </form>
-                )}
-              </Menu>
+              <ProjectCardMenu projectId={p.id} projectName={p.name} deleteProject={deleteProject} />
             </div>
 
             <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{p.name}</p>
