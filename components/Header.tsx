@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { signOut } from "@/app/login/actions";
 import type { Profile } from "@/lib/types";
+import AppSwitcher from "./AppSwitcher";
 import ThemeToggle from "./ThemeToggle";
 import NavLink from "./NavLink";
 
@@ -45,11 +46,15 @@ export default function Header({ profile, isLeader }: { profile: Profile; isLead
           ))}
         </nav>
 
-        <div className="justify-self-end">
+        <div className="flex items-center gap-1 justify-self-end">
+          <div className="md:hidden">
+            <AppSwitcher buttonClassName="text-white/90 hover:bg-white/10" />
+          </div>
           <div className="hidden items-center gap-1 md:flex">
             <span className="hidden text-sm text-blue-100/80 lg:inline">
               {profile.full_name ?? profile.email}
             </span>
+            <AppSwitcher buttonClassName="text-white/90 hover:bg-white/10" />
             <ThemeToggle />
             <form action={signOut}>
               <button
