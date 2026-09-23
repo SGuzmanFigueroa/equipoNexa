@@ -35,7 +35,7 @@ export async function signUp(formData: FormData) {
 
   redirect(
     `/login?message=${encodeURIComponent(
-      "Cuenta creada. Esta cuenta entra sin permisos de admin hasta que se le asigne el rol 'admin' en la tabla profiles (SQL editor de Supabase).",
+      "Cuenta creada exitosamente.",
     )}`,
   );
 }
