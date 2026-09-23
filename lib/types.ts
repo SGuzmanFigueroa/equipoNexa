@@ -1,4 +1,4 @@
-export type UserRole = "admin" | "lider" | "qa" | "developer" | "backend" | "frontend";
+export type UserRole = "admin" | "lider" | "qa" | "developer" | "backend" | "frontend" | "marketing";
 
 // Assigned from bug-tracker's "Usuarios y roles" page — same shared
 // profiles.role, just also read here to gate admin/líder access and to
