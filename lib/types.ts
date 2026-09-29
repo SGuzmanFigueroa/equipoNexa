@@ -59,18 +59,38 @@ export interface TeamMember {
 // Datos que todo integrante debe completar al entrar a /me. Área y fecha
 // de ingreso las puede llenar él mismo solo mientras estén vacías; una vez
 // puestas, solo un admin las cambia (trigger enforce_self_editable_columns).
+export const REQUIRED_PROFILE_FIELDS = [
+  "full_name",
+  "phone",
+  "position",
+  "linkedin_url",
+  "skills",
+  "area",
+  "join_date",
+] as const;
+
+export type RequiredProfileField = (typeof REQUIRED_PROFILE_FIELDS)[number];
+
+export const REQUIRED_PROFILE_LABELS: Record<RequiredProfileField, string> = {
+  full_name: "nombres completos",
+  phone: "teléfono",
+  position: "rol en Nexa",
+  linkedin_url: "LinkedIn",
+  skills: "skills",
+  area: "área en Nexa",
+  join_date: "fecha de ingreso",
+};
+
+export function missingProfileKeys(
+  m: Partial<Record<RequiredProfileField, string | null>>,
+): RequiredProfileField[] {
+  return REQUIRED_PROFILE_FIELDS.filter((k) => !m[k]?.trim());
+}
+
 export function missingProfileFields(
-  m: Pick<TeamMember, "full_name" | "phone" | "position" | "linkedin_url" | "skills" | "area" | "join_date">,
+  m: Partial<Record<RequiredProfileField, string | null>>,
 ): string[] {
-  return [
-    !m.full_name?.trim() && "nombres completos",
-    !m.phone?.trim() && "teléfono",
-    !m.position?.trim() && "rol en Nexa",
-    !m.linkedin_url?.trim() && "LinkedIn",
-    !m.skills?.trim() && "skills",
-    !m.area?.trim() && "área en Nexa",
-    !m.join_date && "fecha de ingreso",
-  ].filter((f): f is string => Boolean(f));
+  return missingProfileKeys(m).map((k) => REQUIRED_PROFILE_LABELS[k]);
 }
 
 export interface TrackingEntry {

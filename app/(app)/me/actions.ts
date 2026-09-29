@@ -1,10 +1,47 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireProfile } from "@/lib/auth";
-import { decodeSlot, missingProfileFields } from "@/lib/types";
+import { decodeSlot, missingProfileFields, missingProfileKeys } from "@/lib/types";
 import { calcularFechaFin } from "@/lib/practice-dates";
+
+export type PendingProfileState = { ok: boolean; error?: string } | null;
+
+// Aviso "Tienes datos pendientes" (PendingProfilePrompt, en el layout): solo
+// escribe los campos obligatorios que todavía están vacíos, sin tocar el
+// resto de la ficha.
+export async function completePendingProfile(
+  _prev: PendingProfileState,
+  formData: FormData,
+): Promise<PendingProfileState> {
+  const profile = await requireProfile();
+  const supabase = await createClient();
+
+  const { data: member } = await supabase
+    .from("team_members")
+    .select("id, full_name, phone, position, linkedin_url, skills, area, join_date")
+    .eq("profile_id", profile.id)
+    .single();
+  if (!member) return { ok: false, error: "Tu cuenta aún no está vinculada a una ficha de integrante." };
+
+  const updates: Record<string, string | null> = {};
+  for (const key of missingProfileKeys(member)) {
+    updates[key] = String(formData.get(key) ?? "").trim();
+  }
+  const stillMissing = missingProfileFields({ ...member, ...updates });
+  if (stillMissing.length > 0) {
+    return { ok: false, error: `Completa los campos obligatorios: ${stillMissing.join(", ")}.` };
+  }
+  if (updates.join_date) updates.end_date = calcularFechaFin(updates.join_date);
+
+  const { error } = await supabase.from("team_members").update(updates).eq("id", member.id);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
 
 // Only these columns are actually writable by self — enforced again by a
 // DB trigger (enforce_self_editable_columns, see 0010) so this isn't just a

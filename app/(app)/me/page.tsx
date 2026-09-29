@@ -4,7 +4,6 @@ import { requireProfile } from "@/lib/auth";
 import AvailabilityEditor from "@/components/AvailabilityEditor";
 import SubmitButton from "@/components/SubmitButton";
 import FlashToast from "@/components/FlashToast";
-import Alert from "@/components/Alert";
 import { StatusBadge } from "@/components/Badge";
 import { saveMyAvailability, updateMyProfile } from "./actions";
 import {
@@ -282,15 +281,8 @@ export default async function MePage({
     <div className="max-w-3xl space-y-6">
       <FlashToast success={success} error={error} />
 
-      {incomplete && (
-        <>
-          <Alert variant="warning">
-            <p className="font-medium">Completa tu perfil</p>
-            <p className="mt-1">Te falta: {missing.join(", ")}.</p>
-          </Alert>
-          {profileSection}
-        </>
-      )}
+      {/* El aviso "Tienes datos pendientes" lo muestra el layout. */}
+      {incomplete && profileSection}
 
       <div>
         <h1 className="text-xl font-semibold text-nexa-navy dark:text-white">Mi disponibilidad</h1>
