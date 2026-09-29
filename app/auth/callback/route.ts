@@ -22,10 +22,8 @@ export async function GET(request: NextRequest) {
   }
 
   if (searchParams.get("error_description")) {
-    const msg = "El enlace de confirmación ya no es válido o expiró. Pide uno nuevo con «Reenviar correo de confirmación».";
-    return NextResponse.redirect(`${origin}/login?${new URLSearchParams({ error: msg, reason: "unconfirmed" })}`);
+    return NextResponse.redirect(`${origin}/login?error=link_expired`);
   }
 
-  const msg = "¡Tu correo quedó confirmado! Ya puedes iniciar sesión.";
-  return NextResponse.redirect(`${origin}/login?${new URLSearchParams({ message: msg })}`);
+  return NextResponse.redirect(`${origin}/login?message=email_confirmed`);
 }

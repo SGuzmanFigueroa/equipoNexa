@@ -3,10 +3,12 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { authErrorCode, authErrorMessage } from "@/lib/auth-errors";
+import { authErrorCode, type AuthErrorCode, type AuthMessageCode } from "@/lib/auth-errors";
 
-function loginUrl(params: Record<string, string>) {
-  return `/login?${new URLSearchParams(params).toString()}`;
+// Solo se pasan CÓDIGOS por la URL; la página los traduce (lib/auth-errors).
+function toLogin(params: { error?: AuthErrorCode; message?: AuthMessageCode; mode?: "register" }): never {
+  const qs = new URLSearchParams(params as Record<string, string>).toString();
+  redirect(`/login${qs ? `?${qs}` : ""}`);
 }
 
 // Después de confirmar el correo, Supabase manda aquí (debe estar en la
@@ -23,11 +25,7 @@ export async function signIn(formData: FormData) {
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
-  if (error) {
-    const params: Record<string, string> = { error: authErrorMessage(error) };
-    if (authErrorCode(error) === "email_not_confirmed") params.reason = "unconfirmed";
-    redirect(loginUrl(params));
-  }
+  if (error) toLogin({ error: authErrorCode(error) });
 
   redirect("/dashboard");
 }
@@ -37,9 +35,7 @@ export async function signUp(formData: FormData) {
   const password = String(formData.get("password") ?? "");
   const fullName = String(formData.get("full_name") ?? "").trim();
 
-  if (!fullName || !email) {
-    redirect(loginUrl({ error: "Ingresa tu nombre completo y tu correo." }));
-  }
+  if (!fullName || !email) toLogin({ error: "missing_fields", mode: "register" });
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
@@ -48,27 +44,17 @@ export async function signUp(formData: FormData) {
     options: { data: { full_name: fullName }, emailRedirectTo: await confirmRedirectUrl() },
   });
 
-  if (error) {
-    redirect(loginUrl({ error: authErrorMessage(error) }));
-  }
+  if (error) toLogin({ error: authErrorCode(error), mode: "register" });
 
   // Sin sesión = el proyecto exige confirmar el correo antes de entrar.
-  if (!data.session) {
-    redirect(
-      loginUrl({
-        message:
-          "¡Cuenta creada! Te enviamos un correo para confirmar tu cuenta. Ábrelo y haz clic en el enlace (revisa también Spam o Promociones); después ya puedes iniciar sesión aquí.",
-        reason: "unconfirmed",
-      }),
-    );
-  }
+  if (!data.session) toLogin({ message: "signup_pending" });
 
   redirect("/dashboard");
 }
 
 export async function resendConfirmation(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
-  if (!email) redirect(loginUrl({ error: "Escribe tu correo para reenviarte la confirmación.", reason: "unconfirmed" }));
+  if (!email) toLogin({ error: "missing_email" });
 
   const supabase = await createClient();
   const { error } = await supabase.auth.resend({
@@ -77,14 +63,8 @@ export async function resendConfirmation(formData: FormData) {
     options: { emailRedirectTo: await confirmRedirectUrl() },
   });
 
-  if (error) {
-    redirect(loginUrl({ error: authErrorMessage(error), reason: "unconfirmed" }));
-  }
-  redirect(
-    loginUrl({
-      message: "Listo, te reenviamos el correo de confirmación. Revisa tu bandeja de entrada y también Spam.",
-    }),
-  );
+  if (error) toLogin({ error: authErrorCode(error) });
+  toLogin({ message: "confirmation_resent" });
 }
 
 export async function signOut() {
