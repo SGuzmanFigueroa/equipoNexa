@@ -1,12 +1,13 @@
 import SubmitButton from "@/components/SubmitButton";
-import { signIn, signUp } from "./actions";
+import { resendConfirmation, signIn, signUp } from "./actions";
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; message?: string }>;
+  searchParams: Promise<{ error?: string; message?: string; reason?: string }>;
 }) {
-  const { error, message } = await searchParams;
+  const { error, message, reason } = await searchParams;
+  const unconfirmed = reason === "unconfirmed";
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-nexa-navy via-nexa-blue to-nexa-sky px-4 py-10">
@@ -22,12 +23,46 @@ export default async function LoginPage({
         </div>
 
         {error && (
-          <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 shadow">{error}</div>
+          <div
+            role="alert"
+            className="flex gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-700 shadow"
+          >
+            <span aria-hidden className="mt-px font-bold">!</span>
+            <p>{error}</p>
+          </div>
         )}
         {message && (
-          <div className="rounded-md bg-white px-3 py-2 text-sm text-nexa-blue shadow">
-            {message}
+          <div
+            role="status"
+            className="flex gap-2.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3.5 py-3 text-sm text-emerald-800 shadow"
+          >
+            <span aria-hidden className="mt-px font-bold">✓</span>
+            <p>{message}</p>
           </div>
+        )}
+        {unconfirmed && (
+          <form
+            action={resendConfirmation}
+            className="space-y-2 rounded-xl border border-white/20 bg-white/95 p-4 shadow-lg shadow-nexa-navy/10"
+          >
+            <p className="text-sm font-medium text-slate-700">¿No te llegó el correo de confirmación?</p>
+            <div className="flex gap-2">
+              <input
+                name="email"
+                type="email"
+                required
+                placeholder="Tu correo electrónico"
+                className="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20"
+              />
+              <SubmitButton
+                variant="dark"
+                pendingLabel="Enviando..."
+                className="shrink-0 rounded-md px-3 py-2 text-sm font-medium"
+              >
+                Reenviar
+              </SubmitButton>
+            </div>
+          </form>
         )}
 
         <form

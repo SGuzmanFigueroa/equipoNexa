@@ -4,6 +4,7 @@ import { StatusBadge } from "@/components/Badge";
 import { STATUS_LABELS } from "@/lib/types";
 import { formatDateDMY, type DirectoryMember, type SortDir, type SortKey } from "@/lib/member-filters";
 import { SortIcon } from "./icons";
+import RowActions from "./RowActions";
 
 function LeaderBadge() {
   return (
@@ -76,11 +77,13 @@ export default function MembersTable({
   sort,
   dir,
   onSort,
+  onGenerateLetter,
 }: {
   members: DirectoryMember[];
   sort: SortKey | "";
   dir: SortDir;
   onSort: (column: SortKey) => void;
+  onGenerateLetter: (memberId: string) => void;
 }) {
   return (
     <>
@@ -99,6 +102,9 @@ export default function MembersTable({
                 <SortableHeader label="Ingreso" column="join_date" sort={sort} dir={dir} onSort={onSort} className="w-[1%] whitespace-nowrap" />
                 <th scope="col" className="w-[1%] px-4 py-3 font-semibold uppercase tracking-wider">
                   Estado
+                </th>
+                <th scope="col" className="w-[1%] px-2 py-3">
+                  <span className="sr-only">Acciones</span>
                 </th>
               </tr>
             </thead>
@@ -127,6 +133,9 @@ export default function MembersTable({
                   </td>
                   <td className="whitespace-nowrap px-4 py-3">
                     <StatusBadge status={m.status} label={STATUS_LABELS[m.status]} />
+                  </td>
+                  <td className="px-2 py-3 text-right">
+                    <RowActions memberId={m.id} memberName={m.full_name} onGenerateLetter={onGenerateLetter} />
                   </td>
                 </tr>
               ))}

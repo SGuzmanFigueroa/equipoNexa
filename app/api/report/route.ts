@@ -34,6 +34,7 @@ export async function GET() {
     Teléfono: m.phone ?? "",
     Edad: m.age ?? "",
     Carrera: m.career ?? "",
+    Universidad: m.university ?? "",
     "Rol de último trabajo": m.last_job_role ?? "",
     LinkedIn: m.linkedin_url ?? "",
     GitHub: m.github_username ?? "",

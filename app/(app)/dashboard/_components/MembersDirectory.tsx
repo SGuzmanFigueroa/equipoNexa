@@ -20,6 +20,7 @@ import FilterBar from "./FilterBar";
 import ActiveFilters, { hasActiveFilters } from "./ActiveFilters";
 import MembersTable from "./MembersTable";
 import { SearchIcon } from "./icons";
+import GenerateLetterDialog from "@/components/GenerateLetterDialog";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -78,6 +79,8 @@ export default function MembersDirectory({
   const [filters, setFilters] = useState<MemberFilters>(EMPTY_FILTERS);
   const [searchInput, setSearchInput] = useState("");
   const [restored, setRestored] = useState(false);
+  // Un solo modal de carta para toda la tabla (el menú ⋮ solo pasa el id).
+  const [letterMemberId, setLetterMemberId] = useState<string | null>(null);
 
   // sessionStorage solo existe en el navegador: se lee tras montar para no
   // desincronizar el HTML del servidor (layout effect: antes de pintar, sin parpadeo).
@@ -168,7 +171,13 @@ export default function MembersDirectory({
       </section>
 
       {visible.length > 0 ? (
-        <MembersTable members={visible} sort={filters.sort} dir={filters.dir} onSort={onSort} />
+        <MembersTable
+          members={visible}
+          sort={filters.sort}
+          dir={filters.dir}
+          onSort={onSort}
+          onGenerateLetter={setLetterMemberId}
+        />
       ) : (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white/60 px-6 py-14 text-center dark:border-slate-700 dark:bg-slate-900/30">
           <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
@@ -198,6 +207,12 @@ export default function MembersDirectory({
           )}
         </div>
       )}
+
+      <GenerateLetterDialog
+        memberId={letterMemberId}
+        open={letterMemberId !== null}
+        onClose={() => setLetterMemberId(null)}
+      />
     </div>
   );
 }

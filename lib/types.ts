@@ -40,6 +40,7 @@ export interface TeamMember {
   profile_id: string | null;
   age: number | null;
   career: string | null;
+  university: string | null;
   last_job_role: string | null;
   linkedin_url: string | null;
   github_username: string | null;
@@ -64,6 +65,8 @@ export const REQUIRED_PROFILE_FIELDS = [
   "full_name",
   "dni",
   "phone",
+  "career",
+  "university",
   "position",
   "linkedin_url",
   "skills",
@@ -77,6 +80,8 @@ export const REQUIRED_PROFILE_LABELS: Record<RequiredProfileField, string> = {
   full_name: "nombres completos",
   dni: "DNI",
   phone: "teléfono",
+  career: "carrera",
+  university: "universidad",
   position: "rol en Nexa",
   linkedin_url: "LinkedIn",
   skills: "skills",

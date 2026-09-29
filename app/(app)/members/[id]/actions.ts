@@ -23,6 +23,7 @@ const TEXT_FIELDS = [
   "dni",
   "phone",
   "career",
+  "university",
   "last_job_role",
   "linkedin_url",
   "github_username",

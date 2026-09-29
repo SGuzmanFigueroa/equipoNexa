@@ -22,7 +22,7 @@ export async function completePendingProfile(
 
   const { data: member } = await supabase
     .from("team_members")
-    .select("id, full_name, dni, phone, position, linkedin_url, skills, area, join_date")
+    .select("id, full_name, dni, phone, career, university, position, linkedin_url, skills, area, join_date")
     .eq("profile_id", profile.id)
     .single();
   if (!member) return { ok: false, error: "Tu cuenta aún no está vinculada a una ficha de integrante." };
@@ -73,6 +73,7 @@ export async function updateMyProfile(formData: FormData) {
   const fullName = String(formData.get("full_name") ?? "").trim();
   const age = String(formData.get("age") ?? "").trim();
   const career = String(formData.get("career") ?? "").trim();
+  const university = String(formData.get("university") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
   const linkedinUrl = String(formData.get("linkedin_url") ?? "").trim();
   const skills = String(formData.get("skills") ?? "").trim();
@@ -89,6 +90,8 @@ export async function updateMyProfile(formData: FormData) {
     full_name: fullName,
     dni,
     phone,
+    career,
+    university,
     position,
     linkedin_url: linkedinUrl,
     skills,
@@ -107,7 +110,8 @@ export async function updateMyProfile(formData: FormData) {
       full_name: fullName,
       dni,
       age: age ? Number(age) : null,
-      career: career || null,
+      career,
+      university,
       phone,
       linkedin_url: linkedinUrl,
       skills,

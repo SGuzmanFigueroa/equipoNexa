@@ -223,9 +223,13 @@ export default async function MePage({
             />
           </div>
           <div>
-            <label className={LABEL_CLASS}>Carrera</label>
-            <select name="career" defaultValue={m.career ?? ""} className={INPUT_CLASS}>
-              <option value="">Sin especificar</option>
+            <label className={LABEL_CLASS}>
+              Carrera <Required />
+            </label>
+            <select name="career" required defaultValue={m.career ?? ""} className={INPUT_CLASS}>
+              <option value="" disabled>
+                Elige tu carrera
+              </option>
               {CAREER_OPTIONS.map((c) => (
                 <option key={c} value={c}>
                   {c}
@@ -235,6 +239,20 @@ export default async function MePage({
                 <option value={m.career}>{m.career}</option>
               )}
             </select>
+            <p className={HINT_CLASS}>Tu carrera universitaria (no el área en Nexa).</p>
+          </div>
+          <div>
+            <label className={LABEL_CLASS}>
+              Universidad <Required />
+            </label>
+            <input
+              name="university"
+              required
+              defaultValue={m.university ?? ""}
+              placeholder="Ej: Universidad Privada del Norte"
+              className={INPUT_CLASS}
+            />
+            <p className={HINT_CLASS}>Nombre completo, sin abreviar.</p>
           </div>
           <div>
             <label className={LABEL_CLASS}>GitHub (usuario)</label>

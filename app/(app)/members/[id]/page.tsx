@@ -11,6 +11,7 @@ import { StatusBadge } from "@/components/Badge";
 import Tabs from "@/components/Tabs";
 import ReadEditToggle from "@/components/ReadEditToggle";
 import PracticeDateFields from "@/components/PracticeDateFields";
+import { GenerateLetterButton } from "@/components/GenerateLetterDialog";
 import { updateMember, deleteMember, addTrackingEntry, saveAvailability } from "./actions";
 import {
   CAREER_OPTIONS,
@@ -99,6 +100,7 @@ export default async function MemberDetailPage({
           <Field label="Teléfono" value={m.phone} />
           <Field label="Edad" value={m.age} />
           <Field label="Carrera" value={m.career} />
+          <Field label="Universidad" value={m.university} />
           <Field label="Rol de último trabajo" value={m.last_job_role} />
           <Field
             label="LinkedIn"
@@ -141,9 +143,18 @@ export default async function MemberDetailPage({
               </select>
             </div>
             <div>
-              <label className={labelClass}>Rol de último trabajo</label>
-              <input name="last_job_role" defaultValue={m.last_job_role ?? ""} className={inputClass} />
+              <label className={labelClass}>Universidad</label>
+              <input
+                name="university"
+                defaultValue={m.university ?? ""}
+                placeholder="Ej: Universidad Privada del Norte"
+                className={inputClass}
+              />
             </div>
+          </div>
+          <div>
+            <label className={labelClass}>Rol de último trabajo</label>
+            <input name="last_job_role" defaultValue={m.last_job_role ?? ""} className={inputClass} />
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
@@ -437,7 +448,10 @@ export default async function MemberDetailPage({
               </p>
             </div>
           </div>
-          <StatusBadge status={m.status} label={STATUS_LABELS[m.status]} />
+          <div className="flex flex-wrap items-center gap-3">
+            <StatusBadge status={m.status} label={STATUS_LABELS[m.status]} />
+            <GenerateLetterButton memberId={m.id} />
+          </div>
         </div>
 
         {assignedProjects.length > 0 && (

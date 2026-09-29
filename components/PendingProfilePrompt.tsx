@@ -5,7 +5,7 @@ import Modal from "@/components/Modal";
 import SubmitButton from "@/components/SubmitButton";
 import { useToast } from "@/components/Toast";
 import { completePendingProfile, type PendingProfileState } from "@/app/(app)/me/actions";
-import { DNI_INPUT_PROPS, REQUIRED_PROFILE_LABELS, ROLE_OPTIONS, type RequiredProfileField } from "@/lib/types";
+import { CAREER_OPTIONS, DNI_INPUT_PROPS, REQUIRED_PROFILE_LABELS, ROLE_OPTIONS, type RequiredProfileField } from "@/lib/types";
 import { calcularFechaFin } from "@/lib/practice-dates";
 
 // "Más tarde" solo esconde la ventana durante esta sesión del navegador; el
@@ -51,6 +51,37 @@ function Field({ field }: { field: RequiredProfileField }) {
           {label}
           <input id="pending-phone" name="phone" type="tel" required placeholder="Ej: +51 987 654 321" className={INPUT} />
           <p className={HINT}>Con código de país.</p>
+        </div>
+      );
+    case "career":
+      return (
+        <div>
+          {label}
+          <select id="pending-career" name="career" required defaultValue="" className={INPUT}>
+            <option value="" disabled>
+              Elige tu carrera
+            </option>
+            {CAREER_OPTIONS.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+          <p className={HINT}>Tu carrera universitaria (no el área ni el cargo en Nexa).</p>
+        </div>
+      );
+    case "university":
+      return (
+        <div>
+          {label}
+          <input
+            id="pending-university"
+            name="university"
+            required
+            placeholder="Ej: Universidad Privada del Norte"
+            className={INPUT}
+          />
+          <p className={HINT}>Nombre completo de tu universidad, sin abreviar.</p>
         </div>
       );
     case "position":
