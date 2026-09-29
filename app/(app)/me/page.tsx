@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/Badge";
 import { saveMyAvailability, updateMyProfile } from "./actions";
 import {
   CAREER_OPTIONS,
+  DNI_INPUT_PROPS,
   ROLE_OPTIONS,
   STATUS_LABELS,
   encodeSlot,
@@ -86,8 +87,8 @@ export default async function MePage({
     >
       <h2 className="mb-1 text-sm font-semibold text-nexa-navy dark:text-white">Tu perfil</h2>
       <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
-        Los campos con <Required /> son obligatorios. Área en Nexa y fecha de ingreso solo las
-        puedes llenar la primera vez; después, solo un admin las cambia.
+        Los campos con <Required /> son obligatorios. DNI, área en Nexa y fecha de ingreso solo los
+        puedes llenar la primera vez; después, solo un admin los cambia.
       </p>
       <form action={updateMyProfile} className="space-y-4">
         <div>
@@ -103,7 +104,21 @@ export default async function MePage({
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div>
+            <label className={LABEL_CLASS}>
+              DNI <Required />
+            </label>
+            <input
+              name="dni"
+              required={!m.dni}
+              disabled={!!m.dni}
+              defaultValue={m.dni ?? ""}
+              {...DNI_INPUT_PROPS}
+              className={INPUT_CLASS}
+            />
+            <p className={HINT_CLASS}>Una vez guardado, solo un admin lo cambia.</p>
+          </div>
           <div>
             <label className={LABEL_CLASS}>
               Teléfono <Required />

@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireProfile } from "@/lib/auth";
-import { decodeSlot, missingProfileFields, missingProfileKeys } from "@/lib/types";
+import { decodeSlot, isValidDni, missingProfileFields, missingProfileKeys } from "@/lib/types";
+import { friendlyDbError } from "@/lib/db-errors";
 import { calcularFechaFin } from "@/lib/practice-dates";
 
 export type PendingProfileState = { ok: boolean; error?: string } | null;
@@ -21,7 +22,7 @@ export async function completePendingProfile(
 
   const { data: member } = await supabase
     .from("team_members")
-    .select("id, full_name, phone, position, linkedin_url, skills, area, join_date")
+    .select("id, full_name, dni, phone, position, linkedin_url, skills, area, join_date")
     .eq("profile_id", profile.id)
     .single();
   if (!member) return { ok: false, error: "Tu cuenta aún no está vinculada a una ficha de integrante." };
@@ -34,10 +35,13 @@ export async function completePendingProfile(
   if (stillMissing.length > 0) {
     return { ok: false, error: `Completa los campos obligatorios: ${stillMissing.join(", ")}.` };
   }
+  if ("dni" in updates && !isValidDni(updates.dni)) {
+    return { ok: false, error: "El DNI debe tener exactamente 8 dígitos." };
+  }
   if (updates.join_date) updates.end_date = calcularFechaFin(updates.join_date);
 
   const { error } = await supabase.from("team_members").update(updates).eq("id", member.id);
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: friendlyDbError(error) };
 
   revalidatePath("/", "layout");
   return { ok: true };
@@ -52,12 +56,18 @@ export async function updateMyProfile(formData: FormData) {
 
   const { data: member } = await supabase
     .from("team_members")
-    .select("id, area, join_date")
+    .select("id, area, join_date, dni")
     .eq("profile_id", profile.id)
     .single();
 
   if (!member) {
     redirect("/me");
+  }
+
+  // DNI: igual que área/fecha, solo se toma si aún estaba vacío.
+  const dni = member.dni ?? String(formData.get("dni") ?? "").trim();
+  if (dni && !isValidDni(dni)) {
+    redirect(`/me?error=${encodeURIComponent("El DNI debe tener exactamente 8 dígitos.")}`);
   }
 
   const fullName = String(formData.get("full_name") ?? "").trim();
@@ -77,6 +87,7 @@ export async function updateMyProfile(formData: FormData) {
 
   const missing = missingProfileFields({
     full_name: fullName,
+    dni,
     phone,
     position,
     linkedin_url: linkedinUrl,
@@ -94,6 +105,7 @@ export async function updateMyProfile(formData: FormData) {
     .from("team_members")
     .update({
       full_name: fullName,
+      dni,
       age: age ? Number(age) : null,
       career: career || null,
       phone,
@@ -111,7 +123,7 @@ export async function updateMyProfile(formData: FormData) {
     .eq("id", member.id);
 
   if (error) {
-    redirect(`/me?error=${encodeURIComponent(error.message)}`);
+    redirect(`/me?error=${encodeURIComponent(friendlyDbError(error))}`);
   }
 
   await supabase.from("team_member_projects").delete().eq("member_id", member.id);

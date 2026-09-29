@@ -14,6 +14,7 @@ import PracticeDateFields from "@/components/PracticeDateFields";
 import { updateMember, deleteMember, addTrackingEntry, saveAvailability } from "./actions";
 import {
   CAREER_OPTIONS,
+  DNI_INPUT_PROPS,
   MEMBER_STATUSES,
   ROLE_LABELS,
   ROLE_OPTIONS,
@@ -180,6 +181,7 @@ export default async function MemberDetailPage({
           <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Nombre completo" value={m.full_name} />
             <Field label="Correo" value={m.email} />
+            <Field label="DNI" value={m.dni} />
             <Field label="Área en Nexa" value={m.area} />
             <Field label="Cargo en Nexa" value={m.position} />
             <Field label="Tipo de colaboración" value={m.collaboration_type} />
@@ -215,12 +217,24 @@ export default async function MemberDetailPage({
             </label>
             <input name="full_name" defaultValue={m.full_name} required disabled={!isAdmin} className={inputClass} />
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div>
               <label className={labelClass}>
                 Correo {!isAdmin && <span className="text-xs text-slate-400">(solo un admin lo cambia)</span>}
               </label>
               <input name="email" type="email" defaultValue={m.email ?? ""} disabled={!isAdmin} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>
+                DNI {!isAdmin && <span className="text-xs text-slate-400">(solo un admin lo cambia)</span>}
+              </label>
+              <input
+                name="dni"
+                defaultValue={m.dni ?? ""}
+                disabled={!isAdmin}
+                {...DNI_INPUT_PROPS}
+                className={inputClass}
+              />
             </div>
             <div>
               <label className={labelClass}>Área en Nexa</label>

@@ -35,6 +35,7 @@ export interface TeamMember {
   id: string;
   full_name: string;
   email: string | null;
+  dni: string | null;
   phone: string | null;
   profile_id: string | null;
   age: number | null;
@@ -61,6 +62,7 @@ export interface TeamMember {
 // puestas, solo un admin las cambia (trigger enforce_self_editable_columns).
 export const REQUIRED_PROFILE_FIELDS = [
   "full_name",
+  "dni",
   "phone",
   "position",
   "linkedin_url",
@@ -73,6 +75,7 @@ export type RequiredProfileField = (typeof REQUIRED_PROFILE_FIELDS)[number];
 
 export const REQUIRED_PROFILE_LABELS: Record<RequiredProfileField, string> = {
   full_name: "nombres completos",
+  dni: "DNI",
   phone: "teléfono",
   position: "rol en Nexa",
   linkedin_url: "LinkedIn",
@@ -86,6 +89,20 @@ export function missingProfileKeys(
 ): RequiredProfileField[] {
   return REQUIRED_PROFILE_FIELDS.filter((k) => !m[k]?.trim());
 }
+
+// DNI peruano: exactamente 8 dígitos (misma regla que el CHECK de la BD).
+export function isValidDni(value: string | null | undefined) {
+  return !!value && /^[0-9]{8}$/.test(value.trim());
+}
+
+export const DNI_INPUT_PROPS = {
+  inputMode: "numeric",
+  pattern: "[0-9]{8}",
+  maxLength: 8,
+  minLength: 8,
+  title: "El DNI debe tener exactamente 8 dígitos",
+  placeholder: "8 dígitos, ej: 71234567",
+} as const;
 
 export function missingProfileFields(
   m: Partial<Record<RequiredProfileField, string | null>>,

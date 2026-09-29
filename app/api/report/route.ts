@@ -29,6 +29,7 @@ export async function GET() {
 
   const membersSheet = ((members ?? []) as TeamMember[]).map((m) => ({
     Nombre: m.full_name,
+    DNI: m.dni ?? "",
     Correo: m.email ?? "",
     Teléfono: m.phone ?? "",
     Edad: m.age ?? "",

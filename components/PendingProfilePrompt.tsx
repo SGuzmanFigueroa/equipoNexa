@@ -5,7 +5,7 @@ import Modal from "@/components/Modal";
 import SubmitButton from "@/components/SubmitButton";
 import { useToast } from "@/components/Toast";
 import { completePendingProfile, type PendingProfileState } from "@/app/(app)/me/actions";
-import { REQUIRED_PROFILE_LABELS, ROLE_OPTIONS, type RequiredProfileField } from "@/lib/types";
+import { DNI_INPUT_PROPS, REQUIRED_PROFILE_LABELS, ROLE_OPTIONS, type RequiredProfileField } from "@/lib/types";
 import { calcularFechaFin } from "@/lib/practice-dates";
 
 // "Más tarde" solo esconde la ventana durante esta sesión del navegador; el
@@ -21,7 +21,9 @@ function Field({ field }: { field: RequiredProfileField }) {
   const [joinDate, setJoinDate] = useState("");
   const label = (
     <label htmlFor={`pending-${field}`} className={LABEL}>
-      {REQUIRED_PROFILE_LABELS[field].charAt(0).toUpperCase() + REQUIRED_PROFILE_LABELS[field].slice(1)}{" "}
+      {field === "linkedin_url" || field === "dni"
+        ? REQUIRED_PROFILE_LABELS[field]
+        : REQUIRED_PROFILE_LABELS[field].charAt(0).toUpperCase() + REQUIRED_PROFILE_LABELS[field].slice(1)}{" "}
       <span className="text-red-500">*</span>
     </label>
   );
@@ -33,6 +35,14 @@ function Field({ field }: { field: RequiredProfileField }) {
           {label}
           <input id="pending-full_name" name="full_name" required placeholder="Ej: María Fernanda López Díaz" className={INPUT} />
           <p className={HINT}>Nombres y apellidos completos.</p>
+        </div>
+      );
+    case "dni":
+      return (
+        <div>
+          {label}
+          <input id="pending-dni" name="dni" required {...DNI_INPUT_PROPS} className={INPUT} />
+          <p className={HINT}>Solo números. Revísalo bien: después solo un admin puede cambiarlo.</p>
         </div>
       );
     case "phone":

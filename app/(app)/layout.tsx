@@ -13,7 +13,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const supabase = await createClient();
   const { data: member } = await supabase
     .from("team_members")
-    .select("full_name, phone, position, linkedin_url, skills, area, join_date")
+    .select("full_name, dni, phone, position, linkedin_url, skills, area, join_date")
     .eq("profile_id", profile.id)
     .maybeSingle();
   const missing = member ? missingProfileKeys(member) : [];

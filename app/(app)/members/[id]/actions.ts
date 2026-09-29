@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin, requireAdminOrLeader } from "@/lib/auth";
-import { decodeSlot } from "@/lib/types";
+import { decodeSlot, isValidDni } from "@/lib/types";
+import { friendlyDbError } from "@/lib/db-errors";
 import { calcularFechaFin } from "@/lib/practice-dates";
 
 // The profile page now splits the old one-big-form into several small
@@ -19,6 +20,7 @@ import { calcularFechaFin } from "@/lib/practice-dates";
 const TEXT_FIELDS = [
   "full_name",
   "email",
+  "dni",
   "phone",
   "career",
   "last_job_role",
@@ -55,6 +57,11 @@ export async function updateMember(memberId: string, formData: FormData) {
   }
   // full_name is required at the DB level — never send an empty string.
   if ("full_name" in updates && !updates.full_name) delete updates.full_name;
+  // DNI obligatorio: nunca se borra desde aquí, y si viene debe ser válido.
+  if ("dni" in updates && !updates.dni) delete updates.dni;
+  if (updates.dni && !isValidDni(String(updates.dni))) {
+    redirect(`/members/${memberId}?error=${encodeURIComponent("El DNI debe tener exactamente 8 dígitos.")}`);
+  }
 
   // La fecha de salida de prácticas nunca se toma tal cual del formulario:
   // se recalcula desde la fecha de ingreso. Un líder no puede cambiar
@@ -75,7 +82,7 @@ export async function updateMember(memberId: string, formData: FormData) {
   if (Object.keys(updates).length > 0) {
     const { error } = await supabase.from("team_members").update(updates).eq("id", memberId);
     if (error) {
-      redirect(`/members/${memberId}?error=${encodeURIComponent(error.message)}`);
+      redirect(`/members/${memberId}?error=${encodeURIComponent(friendlyDbError(error))}`);
     }
   }
 

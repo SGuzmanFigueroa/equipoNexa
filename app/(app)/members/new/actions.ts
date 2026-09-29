@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdminOrLeader } from "@/lib/auth";
 import { calcularFechaFin } from "@/lib/practice-dates";
+import { isValidDni } from "@/lib/types";
+import { friendlyDbError } from "@/lib/db-errors";
 
 export async function createMember(formData: FormData) {
   const { profile } = await requireAdminOrLeader();
@@ -11,6 +13,7 @@ export async function createMember(formData: FormData) {
 
   const fullName = String(formData.get("full_name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
+  const dni = String(formData.get("dni") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
   const age = String(formData.get("age") ?? "").trim();
   const career = String(formData.get("career") ?? "").trim();
@@ -29,6 +32,7 @@ export async function createMember(formData: FormData) {
 
   const missing = [
     !fullName && "nombres completos",
+    !dni && "DNI",
     !email && "correo",
     !phone && "teléfono",
     !area && "área en Nexa",
@@ -39,12 +43,16 @@ export async function createMember(formData: FormData) {
       `/members/new?error=${encodeURIComponent(`Completa los campos obligatorios: ${missing.join(", ")}.`)}`,
     );
   }
+  if (!isValidDni(dni)) {
+    redirect(`/members/new?error=${encodeURIComponent("El DNI debe tener exactamente 8 dígitos.")}`);
+  }
 
   const { data, error } = await supabase
     .from("team_members")
     .insert({
       full_name: fullName,
       email: email || null,
+      dni,
       phone: phone || null,
       age: age ? Number(age) : null,
       career: career || null,
@@ -67,7 +75,7 @@ export async function createMember(formData: FormData) {
     .single();
 
   if (error || !data) {
-    redirect(`/members/new?error=${encodeURIComponent(error?.message ?? "No se pudo crear el integrante")}`);
+    redirect(`/members/new?error=${encodeURIComponent(error ? friendlyDbError(error) : "No se pudo crear el integrante")}`);
   }
 
   if (projectIds.length > 0) {
