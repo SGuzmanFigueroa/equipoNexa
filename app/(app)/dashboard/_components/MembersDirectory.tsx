@@ -71,10 +71,13 @@ export default function MembersDirectory({
   members,
   projects,
   notice,
+  canGenerateLetter = false,
 }: {
   members: DirectoryMember[];
   projects: DirectoryProject[];
   notice?: React.ReactNode;
+  // Solo el admin ve "Generar carta" (el servidor también lo exige).
+  canGenerateLetter?: boolean;
 }) {
   const [filters, setFilters] = useState<MemberFilters>(EMPTY_FILTERS);
   const [searchInput, setSearchInput] = useState("");
@@ -176,7 +179,7 @@ export default function MembersDirectory({
           sort={filters.sort}
           dir={filters.dir}
           onSort={onSort}
-          onGenerateLetter={setLetterMemberId}
+          onGenerateLetter={canGenerateLetter ? setLetterMemberId : undefined}
         />
       ) : (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white/60 px-6 py-14 text-center dark:border-slate-700 dark:bg-slate-900/30">
@@ -208,11 +211,13 @@ export default function MembersDirectory({
         </div>
       )}
 
-      <GenerateLetterDialog
-        memberId={letterMemberId}
-        open={letterMemberId !== null}
-        onClose={() => setLetterMemberId(null)}
-      />
+      {canGenerateLetter && (
+        <GenerateLetterDialog
+          memberId={letterMemberId}
+          open={letterMemberId !== null}
+          onClose={() => setLetterMemberId(null)}
+        />
+      )}
     </div>
   );
 }

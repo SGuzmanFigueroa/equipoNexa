@@ -30,7 +30,8 @@ function fail(status: number, error: string, extra: Partial<Fail> = {}) {
 async function loadMember(integranteId: string | null) {
   const profile = await getCurrentProfile();
   if (!profile) return { error: fail(401, "Tu sesión expiró. Vuelve a iniciar sesión.") };
-  if (profile.role !== "admin" && profile.role !== "lider") {
+  // Solo el admin genera cartas (los líderes ven Integrantes pero no esto).
+  if (profile.role !== "admin") {
     return { error: fail(403, "No tienes permiso para generar cartas.") };
   }
   if (!integranteId || !UUID_RE.test(integranteId)) {

@@ -12,7 +12,7 @@ export default function RowActions({
 }: {
   memberId: string;
   memberName: string;
-  onGenerateLetter: (memberId: string) => void;
+  onGenerateLetter?: (memberId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
@@ -80,18 +80,23 @@ export default function RowActions({
           <Link role="menuitem" href={`/members/${memberId}#informacion`} className={item} onClick={() => setOpen(false)}>
             Editar integrante
           </Link>
-          <div className="my-1 border-t border-slate-100 dark:border-slate-700" />
-          <button
-            role="menuitem"
-            type="button"
-            className={`${item} font-medium text-nexa-blue dark:text-blue-300`}
-            onClick={() => {
-              setOpen(false);
-              onGenerateLetter(memberId);
-            }}
-          >
-            Generar carta
-          </button>
+          {/* Solo llega onGenerateLetter para el admin. */}
+          {onGenerateLetter && (
+            <>
+              <div className="my-1 border-t border-slate-100 dark:border-slate-700" />
+              <button
+                role="menuitem"
+                type="button"
+                className={`${item} font-medium text-nexa-blue dark:text-blue-300`}
+                onClick={() => {
+                  setOpen(false);
+                  onGenerateLetter(memberId);
+                }}
+              >
+                Generar carta
+              </button>
+            </>
+          )}
         </div>
       )}
     </>

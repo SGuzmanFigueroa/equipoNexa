@@ -450,7 +450,7 @@ export default async function MemberDetailPage({
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <StatusBadge status={m.status} label={STATUS_LABELS[m.status]} />
-            <GenerateLetterButton memberId={m.id} />
+            {isAdmin && <GenerateLetterButton memberId={m.id} />}
           </div>
         </div>
 

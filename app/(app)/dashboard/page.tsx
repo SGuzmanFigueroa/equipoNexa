@@ -13,7 +13,7 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ success?: string }>;
 }) {
-  await requireAdminOrLeader();
+  const { isAdmin } = await requireAdminOrLeader();
   const { success } = await searchParams;
   const supabase = await createClient();
 
@@ -97,6 +97,7 @@ export default async function DashboardPage({
       <MembersDirectory
         members={members}
         projects={projects}
+        canGenerateLetter={isAdmin}
         notice={unlinkedProfiles.length > 0 && <UnlinkedAccountsNotice profiles={unlinkedProfiles} />}
       />
     </div>

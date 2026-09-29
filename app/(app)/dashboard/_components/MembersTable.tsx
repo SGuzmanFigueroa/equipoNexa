@@ -83,7 +83,7 @@ export default function MembersTable({
   sort: SortKey | "";
   dir: SortDir;
   onSort: (column: SortKey) => void;
-  onGenerateLetter: (memberId: string) => void;
+  onGenerateLetter?: (memberId: string) => void;
 }) {
   return (
     <>
