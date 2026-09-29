@@ -10,6 +10,7 @@ import InitialsAvatar from "@/components/Avatar";
 import { StatusBadge } from "@/components/Badge";
 import Tabs from "@/components/Tabs";
 import ReadEditToggle from "@/components/ReadEditToggle";
+import PracticeDateFields from "@/components/PracticeDateFields";
 import { updateMember, deleteMember, addTrackingEntry, saveAvailability } from "./actions";
 import {
   CAREER_OPTIONS,
@@ -245,23 +246,18 @@ export default async function MemberDetailPage({
             </div>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div>
-              <label className={labelClass}>
-                Fecha de ingreso{" "}
-                {!isAdmin && <span className="text-xs text-slate-400">(solo un admin la cambia)</span>}
-              </label>
-              <input
-                name="join_date"
-                type="date"
-                defaultValue={m.join_date ?? ""}
-                disabled={!isAdmin}
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className={labelClass}>Fecha de salida</label>
-              <input name="end_date" type="date" defaultValue={m.end_date ?? ""} className={inputClass} />
-            </div>
+            <PracticeDateFields
+              defaultStart={m.join_date}
+              startDisabled={!isAdmin}
+              startLabel={
+                <>
+                  Fecha de ingreso{" "}
+                  {!isAdmin && <span className="text-xs text-slate-400">(solo un admin la cambia)</span>}
+                </>
+              }
+              inputClass={inputClass}
+              labelClass={labelClass}
+            />
             <div>
               <label className={labelClass}>Estado</label>
               <select name="status" defaultValue={m.status} className={inputClass}>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import SubmitButton from "@/components/SubmitButton";
 import Alert from "@/components/Alert";
+import PracticeDateFields from "@/components/PracticeDateFields";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdminOrLeader } from "@/lib/auth";
 import { createMember } from "./actions";
@@ -25,7 +26,8 @@ export default async function NewMemberPage({
         Nuevo integrante
       </h1>
       <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">
-        Registra a una persona del equipo de Nexa.
+        Registra a una persona del equipo de Nexa. Los campos con{" "}
+        <span className="text-red-500">*</span> son obligatorios.
       </p>
 
       {error && (
@@ -46,13 +48,13 @@ export default async function NewMemberPage({
       >
         <div>
           <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
-            Nombre completo
+            Nombres y apellidos completos <span className="text-red-500">*</span>
           </label>
           <input
             name="full_name"
             required
             defaultValue={full_name ?? ""}
-            placeholder="Ej: María Fernández"
+            placeholder="Ej: María Fernanda López Díaz"
             className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
           />
         </div>
@@ -60,21 +62,26 @@ export default async function NewMemberPage({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
-              Correo
+              Correo <span className="text-red-500">*</span>
             </label>
             <input
               name="email"
               type="email"
+              required
               defaultValue={email ?? ""}
-              placeholder="correo@nexa.com"
+              placeholder="El mismo con el que inicia sesión, ej: maria@gmail.com"
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Teléfono</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Teléfono <span className="text-red-500">*</span>
+            </label>
             <input
               name="phone"
-              placeholder="+51 9..."
+              type="tel"
+              required
+              placeholder="Con código de país, ej: +51 987 654 321"
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
             />
           </div>
@@ -201,10 +208,13 @@ export default async function NewMemberPage({
 
         <div className="grid grid-cols-1 gap-3 border-t border-slate-100 pt-4 dark:border-slate-700 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Área en Nexa</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Área en Nexa <span className="text-red-500">*</span>
+            </label>
             <input
               name="area"
-              placeholder="Ej: Ingeniería de Sistemas"
+              required
+              placeholder="Equipo donde trabaja, ej: QA, Desarrollo, Marketing"
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
             />
           </div>
@@ -225,7 +235,7 @@ export default async function NewMemberPage({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
               Tipo de colaboración
@@ -236,16 +246,18 @@ export default async function NewMemberPage({
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
             />
           </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
-              Fecha de ingreso
-            </label>
-            <input
-              name="join_date"
-              type="date"
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-            />
-          </div>
+          <PracticeDateFields
+            defaultStart={null}
+            startRequired
+            startLabel={
+              <>
+                Fecha de ingreso <span className="text-red-500">*</span>
+              </>
+            }
+            startHint="El día en que empezó en Nexa."
+            labelClass="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
+            inputClass="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+          />
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Estado</label>
             <select

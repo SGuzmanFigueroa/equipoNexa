@@ -4,6 +4,7 @@ import { requireProfile } from "@/lib/auth";
 import AvailabilityEditor from "@/components/AvailabilityEditor";
 import SubmitButton from "@/components/SubmitButton";
 import FlashToast from "@/components/FlashToast";
+import Alert from "@/components/Alert";
 import { StatusBadge } from "@/components/Badge";
 import { saveMyAvailability, updateMyProfile } from "./actions";
 import {
@@ -11,10 +12,20 @@ import {
   ROLE_OPTIONS,
   STATUS_LABELS,
   encodeSlot,
+  missingProfileFields,
   type TeamMember,
   type AvailabilityStatus,
   type Project,
 } from "@/lib/types";
+
+const INPUT_CLASS =
+  "w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:disabled:bg-slate-800";
+const LABEL_CLASS = "mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300";
+const HINT_CLASS = "mt-1 text-xs text-slate-400";
+
+function Required() {
+  return <span className="text-red-500">*</span>;
+}
 
 export default async function MePage({
   searchParams,
@@ -62,10 +73,224 @@ export default async function MePage({
   const initialSlots = (availability ?? []).map((a) =>
     encodeSlot(a.day_of_week, a.hour, a.status as AvailabilityStatus),
   );
+  const missing = missingProfileFields(m);
+  const incomplete = missing.length > 0;
+
+  const profileSection = (
+    <section
+      id="perfil"
+      className={`rounded-lg border bg-white p-5 shadow-sm dark:bg-slate-800 ${
+        incomplete
+          ? "border-amber-300 dark:border-amber-900/60"
+          : "border-slate-200 dark:border-slate-700"
+      }`}
+    >
+      <h2 className="mb-1 text-sm font-semibold text-nexa-navy dark:text-white">Tu perfil</h2>
+      <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
+        Los campos con <Required /> son obligatorios. Área en Nexa y fecha de ingreso solo las
+        puedes llenar la primera vez; después, solo un admin las cambia.
+      </p>
+      <form action={updateMyProfile} className="space-y-4">
+        <div>
+          <label className={LABEL_CLASS}>
+            Nombres y apellidos completos <Required />
+          </label>
+          <input
+            name="full_name"
+            required
+            defaultValue={m.full_name ?? ""}
+            placeholder="Ej: María Fernanda López Díaz"
+            className={INPUT_CLASS}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label className={LABEL_CLASS}>
+              Teléfono <Required />
+            </label>
+            <input
+              name="phone"
+              type="tel"
+              required
+              defaultValue={m.phone ?? ""}
+              placeholder="Con código de país, ej: +51 987 654 321"
+              className={INPUT_CLASS}
+            />
+          </div>
+          <div>
+            <label className={LABEL_CLASS}>
+              LinkedIn <Required />
+            </label>
+            <input
+              name="linkedin_url"
+              type="url"
+              required
+              defaultValue={m.linkedin_url ?? ""}
+              placeholder="Link a tu perfil: https://www.linkedin.com/in/tu-usuario"
+              className={INPUT_CLASS}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div>
+            <label className={LABEL_CLASS}>
+              Rol en Nexa <Required />
+            </label>
+            <select name="position" required defaultValue={m.position ?? ""} className={INPUT_CLASS}>
+              <option value="" disabled>
+                Elige el rol que te asignaron
+              </option>
+              {ROLE_OPTIONS.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+              {m.position && !ROLE_OPTIONS.includes(m.position) && (
+                <option value={m.position}>{m.position}</option>
+              )}
+            </select>
+            <p className={HINT_CLASS}>El puesto que cumples en el equipo.</p>
+          </div>
+          <div>
+            <label className={LABEL_CLASS}>
+              Área en Nexa <Required />
+            </label>
+            <input
+              name="area"
+              required={!m.area}
+              disabled={!!m.area}
+              defaultValue={m.area ?? ""}
+              placeholder="Equipo donde trabajas, ej: QA, Desarrollo, Marketing"
+              className={INPUT_CLASS}
+            />
+            <p className={HINT_CLASS}>El equipo o área de Nexa en el que estás.</p>
+          </div>
+          <div>
+            <label className={LABEL_CLASS}>
+              Fecha de ingreso <Required />
+            </label>
+            <input
+              name="join_date"
+              type="date"
+              required={!m.join_date}
+              disabled={!!m.join_date}
+              defaultValue={m.join_date ?? ""}
+              className={INPUT_CLASS}
+            />
+            <p className={HINT_CLASS}>El día en que empezaste en Nexa.</p>
+          </div>
+        </div>
+
+        <div>
+          <label className={LABEL_CLASS}>
+            Skills <Required />
+          </label>
+          <input
+            name="skills"
+            required
+            defaultValue={m.skills ?? ""}
+            placeholder="Herramientas y tecnologías que manejas, separadas por comas. Ej: Python, SQL, Figma, Selenium"
+            className={INPUT_CLASS}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 border-t border-slate-100 pt-4 dark:border-slate-700 sm:grid-cols-2">
+          <div>
+            <label className={LABEL_CLASS}>Edad</label>
+            <input
+              name="age"
+              type="number"
+              min={0}
+              defaultValue={m.age ?? ""}
+              placeholder="Ej: 22"
+              className={INPUT_CLASS}
+            />
+          </div>
+          <div>
+            <label className={LABEL_CLASS}>Carrera</label>
+            <select name="career" defaultValue={m.career ?? ""} className={INPUT_CLASS}>
+              <option value="">Sin especificar</option>
+              {CAREER_OPTIONS.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+              {m.career && !CAREER_OPTIONS.includes(m.career) && (
+                <option value={m.career}>{m.career}</option>
+              )}
+            </select>
+          </div>
+          <div>
+            <label className={LABEL_CLASS}>GitHub (usuario)</label>
+            <input
+              name="github_username"
+              defaultValue={m.github_username ?? ""}
+              placeholder="Solo el usuario, ej: mariafl"
+              className={INPUT_CLASS}
+            />
+          </div>
+          <div>
+            <label className={LABEL_CLASS}>Área favorita (de tu carrera)</label>
+            <input
+              name="favorite_area"
+              defaultValue={m.favorite_area ?? ""}
+              placeholder="Ej: QA Automation, Backend, UX"
+              className={INPUT_CLASS}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+            Proyectos en los que estás
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {(allProjects as Pick<Project, "id" | "name" | "code">[] | null)?.map((p) => (
+              <label
+                key={p.id}
+                className="flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+              >
+                <input
+                  type="checkbox"
+                  name="project_ids"
+                  value={p.id}
+                  defaultChecked={selectedProjectIds.has(p.id)}
+                />
+                {p.name}
+              </label>
+            ))}
+            {allProjects?.length === 0 && (
+              <p className="text-sm text-slate-400">Todavía no hay proyectos creados.</p>
+            )}
+          </div>
+        </div>
+
+        <SubmitButton
+          variant="primary"
+          pendingLabel="Guardando..."
+          className="rounded-md px-4 py-2 text-sm font-medium"
+        >
+          Guardar perfil
+        </SubmitButton>
+      </form>
+    </section>
+  );
 
   return (
     <div className="max-w-3xl space-y-6">
       <FlashToast success={success} error={error} />
+
+      {incomplete && (
+        <>
+          <Alert variant="warning">
+            <p className="font-medium">Completa tu perfil</p>
+            <p className="mt-1">Te falta: {missing.join(", ")}.</p>
+          </Alert>
+          {profileSection}
+        </>
+      )}
 
       <div>
         <h1 className="text-xl font-semibold text-nexa-navy dark:text-white">Mi disponibilidad</h1>
@@ -87,7 +312,7 @@ export default async function MePage({
           <StatusBadge status={m.status} label={STATUS_LABELS[m.status]} />
         </div>
         <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
-          {m.full_name} · solo un admin puede cambiar tu estado o fecha de ingreso.
+          {m.full_name} · solo un admin puede cambiar tu estado.
         </p>
         <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
           <div>
@@ -101,134 +326,7 @@ export default async function MePage({
         </dl>
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-        <h2 className="mb-1 text-sm font-semibold text-nexa-navy dark:text-white">Tu perfil</h2>
-        <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
-          Esto sí lo puedes editar tú mismo.
-        </p>
-        <form action={updateMyProfile} className="space-y-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Edad
-              </label>
-              <input
-                name="age"
-                type="number"
-                min={0}
-                defaultValue={m.age ?? ""}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Carrera
-              </label>
-              <select
-                name="career"
-                defaultValue={m.career ?? ""}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-              >
-                <option value="">Sin especificar</option>
-                {CAREER_OPTIONS.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-                {m.career && !CAREER_OPTIONS.includes(m.career) && (
-                  <option value={m.career}>{m.career}</option>
-                )}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Rol
-              </label>
-              <select
-                name="position"
-                defaultValue={m.position ?? ""}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-              >
-                <option value="">Sin especificar</option>
-                {ROLE_OPTIONS.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-                {m.position && !ROLE_OPTIONS.includes(m.position) && (
-                  <option value={m.position}>{m.position}</option>
-                )}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Teléfono
-              </label>
-              <input
-                name="phone"
-                defaultValue={m.phone ?? ""}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                GitHub (usuario)
-              </label>
-              <input
-                name="github_username"
-                defaultValue={m.github_username ?? ""}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Área favorita (de tu carrera)
-              </label>
-              <input
-                name="favorite_area"
-                defaultValue={m.favorite_area ?? ""}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-nexa-blue focus:ring-2 focus:ring-nexa-blue/20 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-              Proyectos en los que estás
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {(allProjects as Pick<Project, "id" | "name" | "code">[] | null)?.map((p) => (
-                <label
-                  key={p.id}
-                  className="flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
-                >
-                  <input
-                    type="checkbox"
-                    name="project_ids"
-                    value={p.id}
-                    defaultChecked={selectedProjectIds.has(p.id)}
-                  />
-                  {p.name}
-                </label>
-              ))}
-              {allProjects?.length === 0 && (
-                <p className="text-sm text-slate-400">Todavía no hay proyectos creados.</p>
-              )}
-            </div>
-          </div>
-
-          <SubmitButton
-            variant="primary"
-            pendingLabel="Guardando..."
-            className="rounded-md px-4 py-2 text-sm font-medium"
-          >
-            Guardar perfil
-          </SubmitButton>
-        </form>
-      </section>
+      {!incomplete && profileSection}
     </div>
   );
 }

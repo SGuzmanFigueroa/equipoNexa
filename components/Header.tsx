@@ -27,7 +27,7 @@ export default function Header({ profile, isLeader }: { profile: Profile; isLead
 
   return (
     <header className="bg-nexa-navy px-4 py-3 md:px-8">
-      <div className="mx-auto grid max-w-5xl grid-cols-[auto_1fr_auto] items-center gap-4">
+      <div className="mx-auto grid max-w-[1400px] grid-cols-[auto_1fr_auto] items-center gap-4">
         <Link
           href={isAdmin || isLeader ? "/dashboard" : "/me"}
           className="flex items-center gap-2"
@@ -97,7 +97,7 @@ export default function Header({ profile, isLeader }: { profile: Profile; isLead
       </div>
 
       {menuOpen && (
-        <div className="mx-auto max-w-5xl border-t border-white/10 pt-2 md:hidden">
+        <div className="mx-auto max-w-[1400px] border-t border-white/10 pt-2 md:hidden">
           <nav className="flex flex-col gap-1 pb-2">
             {navItems.map((item) => (
               <div key={item.href} onClick={() => setMenuOpen(false)}>

@@ -20,7 +20,11 @@ export async function signIn(formData: FormData) {
 export async function signUp(formData: FormData) {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
-  const fullName = String(formData.get("full_name") ?? "");
+  const fullName = String(formData.get("full_name") ?? "").trim();
+
+  if (!fullName || !email) {
+    redirect(`/login?error=${encodeURIComponent("Ingresa tu nombre completo y tu correo.")}`);
+  }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signUp({

@@ -46,10 +46,13 @@ export default async function SchedulePage() {
   }));
 
   return (
-    <ScheduleView
-      members={scheduleMembers}
-      availability={availability}
-      projects={(projects ?? []) as { code: string; name: string }[]}
-    />
+    // Mantiene el ancho de antes (el layout ahora permite 1400px).
+    <div className="mx-auto max-w-[960px]">
+      <ScheduleView
+        members={scheduleMembers}
+        availability={availability}
+        projects={(projects ?? []) as { code: string; name: string }[]}
+      />
+    </div>
   );
 }

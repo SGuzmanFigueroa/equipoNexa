@@ -10,6 +10,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   developer: "Developer",
   backend: "Backend",
   frontend: "Frontend",
+  marketing: "Marketing",
 };
 
 export interface Profile {
@@ -53,6 +54,23 @@ export interface TeamMember {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// Datos que todo integrante debe completar al entrar a /me. Área y fecha
+// de ingreso las puede llenar él mismo solo mientras estén vacías; una vez
+// puestas, solo un admin las cambia (trigger enforce_self_editable_columns).
+export function missingProfileFields(
+  m: Pick<TeamMember, "full_name" | "phone" | "position" | "linkedin_url" | "skills" | "area" | "join_date">,
+): string[] {
+  return [
+    !m.full_name?.trim() && "nombres completos",
+    !m.phone?.trim() && "teléfono",
+    !m.position?.trim() && "rol en Nexa",
+    !m.linkedin_url?.trim() && "LinkedIn",
+    !m.skills?.trim() && "skills",
+    !m.area?.trim() && "área en Nexa",
+    !m.join_date && "fecha de ingreso",
+  ].filter((f): f is string => Boolean(f));
 }
 
 export interface TrackingEntry {

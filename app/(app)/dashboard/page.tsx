@@ -1,321 +1,140 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdminOrLeader } from "@/lib/auth";
-import { StatusBadge } from "@/components/Badge";
 import FlashToast from "@/components/FlashToast";
 import Alert from "@/components/Alert";
-import EmptyState from "@/components/EmptyState";
-import { MEMBER_STATUSES, STATUS_LABELS, type Profile, type TeamMember } from "@/lib/types";
+import type { MemberStatus, Profile } from "@/lib/types";
+import type { DirectoryMember, DirectoryProject } from "@/lib/member-filters";
+import MembersDirectory from "./_components/MembersDirectory";
+import { DownloadIcon, InfoIcon, PlusIcon } from "./_components/icons";
 
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; q?: string; success?: string }>;
+  searchParams: Promise<{ success?: string }>;
 }) {
   await requireAdminOrLeader();
-  const { status, q, success } = await searchParams;
+  const { success } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: allMembers }, { data: profiles }, { data: memberProjects }] = await Promise.all([
-    supabase.from("team_members").select("id, status, email"),
+  // Una sola carga en paralelo; el filtrado/orden se hace en el cliente
+  // (MembersDirectory) sin volver a consultar al servidor.
+  const [
+    { data: memberRows, error },
+    { data: profiles },
+    { data: memberProjects },
+    { data: projectRows },
+  ] = await Promise.all([
+    supabase
+      .from("team_members")
+      .select("id, full_name, email, area, career, position, join_date, status, profile_id"),
     supabase.from("profiles").select("id, email, full_name, role, created_at"),
-    supabase.from("team_member_projects").select("member_id, project:projects(name, code)"),
+    supabase.from("team_member_projects").select("member_id, project_id"),
+    supabase.from("projects").select("id, name, code").order("code"),
   ]);
 
-  const projectsByMember = new Map<string, string[]>();
+  const projects = (projectRows ?? []) as DirectoryProject[];
+  const projectById = new Map(projects.map((p) => [p.id, p]));
+  const projectsByMember = new Map<string, DirectoryProject[]>();
   for (const mp of memberProjects ?? []) {
-    const code = (mp.project as unknown as { code: string } | null)?.code;
-    if (!code) continue;
+    const project = projectById.get(mp.project_id);
+    if (!project) continue;
     const list = projectsByMember.get(mp.member_id) ?? [];
-    list.push(code);
+    list.push(project);
     projectsByMember.set(mp.member_id, list);
   }
 
-  const stats = {
-    total: allMembers?.length ?? 0,
-    activos: allMembers?.filter((m) => m.status === "activo").length ?? 0,
-    pausados: allMembers?.filter((m) => m.status === "pausado").length ?? 0,
-    retirados: allMembers?.filter((m) => m.status === "retirado").length ?? 0,
-  };
+  const roleByProfileId = new Map((profiles ?? []).map((p) => [p.id, p.role]));
+  const members: DirectoryMember[] = (memberRows ?? []).map((m) => ({
+    id: m.id,
+    full_name: m.full_name,
+    area: m.area ?? m.career ?? null,
+    position: m.position ?? null,
+    join_date: m.join_date ?? null,
+    status: m.status as MemberStatus,
+    is_leader: !!m.profile_id && roleByProfileId.get(m.profile_id) === "lider",
+    projects: (projectsByMember.get(m.id) ?? []).sort((a, b) => a.code.localeCompare(b.code)),
+  }));
 
   const memberEmails = new Set(
-    (allMembers ?? []).map((m) => m.email?.toLowerCase()).filter(Boolean),
+    (memberRows ?? []).map((m) => m.email?.toLowerCase()).filter(Boolean),
   );
-  const roleByProfileId = new Map((profiles ?? []).map((p) => [p.id, p.role]));
   const unlinkedProfiles = ((profiles ?? []) as Profile[]).filter(
     (p) => !memberEmails.has(p.email.toLowerCase()),
   );
 
-  let query = supabase
-    .from("team_members")
-    .select("id, full_name, area, career, position, join_date, status, profile_id")
-    .order("join_date", { ascending: false, nullsFirst: false })
-    .order("full_name", { ascending: true });
-
-  if (status) query = query.eq("status", status);
-  if (q) query = query.or(`full_name.ilike.%${q}%,area.ilike.%${q}%,position.ilike.%${q}%`);
-
-  const { data: members, error } = await query;
-
   return (
-    <div>
+    <div className="space-y-6">
       <FlashToast success={success} />
 
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-nexa-navy dark:text-white">Integrantes</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Equipo de Nexa Consulting TI
+          <h1 className="text-2xl font-semibold tracking-tight text-nexa-navy dark:text-white">Integrantes</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Gestiona los miembros, cargos, proyectos y estados del equipo.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <a
             href="/api/report"
-            className="rounded-md border border-nexa-blue px-3 py-2 text-sm font-medium text-nexa-blue transition-colors hover:bg-nexa-light dark:hover:bg-blue-950/30"
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-[0_1px_2px_rgba(10,31,68,0.04)] transition-colors hover:border-nexa-blue/40 hover:text-nexa-blue dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-blue-700 dark:hover:text-blue-300"
           >
+            <DownloadIcon />
             Descargar reporte
           </a>
           <Link
             href="/members/new"
-            className="rounded-md bg-nexa-blue px-3 py-2 text-sm font-medium text-white shadow-sm shadow-nexa-blue/30 transition-colors hover:bg-nexa-navy"
+            className="inline-flex h-10 items-center gap-2 rounded-lg bg-nexa-blue px-4 text-sm font-medium text-white shadow-sm shadow-nexa-blue/20 transition-colors hover:bg-nexa-navy dark:hover:bg-blue-700"
           >
-            + Nuevo integrante
+            <PlusIcon />
+            Nuevo integrante
           </Link>
         </div>
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Total</p>
-          <p className="mt-1 text-2xl font-semibold text-nexa-navy dark:text-white">
-            {stats.total}
+      {error && <Alert variant="danger">Error cargando integrantes: {error.message}</Alert>}
+
+      <MembersDirectory
+        members={members}
+        projects={projects}
+        notice={unlinkedProfiles.length > 0 && <UnlinkedAccountsNotice profiles={unlinkedProfiles} />}
+      />
+    </div>
+  );
+}
+
+function UnlinkedAccountsNotice({ profiles }: { profiles: Profile[] }) {
+  const n = profiles.length;
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-nexa-blue/20 bg-nexa-light/50 px-4 py-3 dark:border-blue-900/50 dark:bg-blue-950/20 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white text-nexa-blue ring-1 ring-nexa-blue/15 dark:bg-blue-950/60 dark:text-blue-300 dark:ring-blue-800/60">
+          <InfoIcon />
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-nexa-navy dark:text-blue-100">
+            {n} cuenta{n === 1 ? "" : "s"} del Gestor de Tickets sin integrante en Equipo Nexa
           </p>
-        </div>
-        <div className="rounded-lg border border-emerald-100 bg-emerald-50 p-4 dark:border-emerald-900/40 dark:bg-emerald-950/30">
-          <p className="text-xs font-medium uppercase tracking-wide text-emerald-600/80">
-            Activos
-          </p>
-          <p className="mt-1 text-2xl font-semibold text-emerald-700 dark:text-emerald-300">
-            {stats.activos}
-          </p>
-        </div>
-        <div className="rounded-lg border border-amber-100 bg-amber-50 p-4 dark:border-amber-900/40 dark:bg-amber-950/30">
-          <p className="text-xs font-medium uppercase tracking-wide text-amber-600/80">
-            Pausados
-          </p>
-          <p className="mt-1 text-2xl font-semibold text-amber-700 dark:text-amber-300">
-            {stats.pausados}
-          </p>
-        </div>
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Retirados</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-600 dark:text-slate-300">
-            {stats.retirados}
+          <p className="text-xs text-slate-600 dark:text-slate-400">
+            Tener login no crea el integrante: faltan datos como la fecha de ingreso. Agrégalos
+            manualmente.
           </p>
         </div>
       </div>
-
-      {unlinkedProfiles.length > 0 && (
-        <Alert variant="info" className="mb-6">
-          <p className="mb-2 font-medium text-nexa-navy dark:text-blue-100">
-            {unlinkedProfiles.length} cuenta{unlinkedProfiles.length === 1 ? "" : "s"} registrada
-            {unlinkedProfiles.length === 1 ? "" : "s"} en el Gestor de Tickets todavía sin
-            integrante en Equipo Nexa
-          </p>
-          <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
-            Tener cuenta (login) no crea automáticamente un integrante — faltan datos que esa
-            cuenta no guarda, como la fecha real de ingreso. Revísalos y agrégalos manualmente:
-          </p>
-          <ul className="flex flex-wrap gap-2">
-            {unlinkedProfiles.map((p) => (
-              <li key={p.id}>
-                <Link
-                  href={`/members/new?full_name=${encodeURIComponent(
-                    p.full_name ?? "",
-                  )}&email=${encodeURIComponent(p.email)}`}
-                  className="flex items-center gap-1.5 rounded-full border border-nexa-blue/40 bg-white px-3 py-1 text-xs font-medium text-nexa-blue transition-colors hover:bg-nexa-blue hover:text-white dark:border-blue-800 dark:bg-slate-800 dark:text-blue-300 dark:hover:bg-blue-900"
-                >
-                  + {p.full_name ?? p.email}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </Alert>
-      )}
-
-      <form className="mb-5 flex flex-wrap gap-2 text-sm" action="/dashboard">
-        <input
-          name="q"
-          defaultValue={q ?? ""}
-          placeholder="Buscar por nombre, área o cargo..."
-          className="min-w-[220px] flex-1 rounded-md border border-slate-300 bg-white px-3 py-1.5 outline-none focus:border-nexa-blue dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-        />
-        <select
-          name="status"
-          defaultValue={status ?? ""}
-          className="rounded-md border border-slate-300 bg-white px-2 py-1.5 outline-none focus:border-nexa-blue dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-        >
-          <option value="">Todos los estados</option>
-          {MEMBER_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {STATUS_LABELS[s]}
-            </option>
-          ))}
-        </select>
-        <button
-          type="submit"
-          className="rounded-md bg-nexa-navy px-3 py-1.5 font-medium text-white hover:bg-slate-900"
-        >
-          Filtrar
-        </button>
-        {(status || q) && (
-          <Link
-            href="/dashboard"
-            className="rounded-md px-3 py-1.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
-          >
-            Limpiar
-          </Link>
-        )}
-      </form>
-
-      {error && (
-        <Alert variant="danger" className="mb-4">
-          Error cargando integrantes: {error.message}
-        </Alert>
-      )}
-
-      {members?.length === 0 ? (
-        <EmptyState
-          title="No hay integrantes con estos filtros."
-          description="Prueba con otro nombre, área o estado."
-          action={
-            (status || q) && (
-              <Link
-                href="/dashboard"
-                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
-              >
-                Limpiar filtros
-              </Link>
-            )
-          }
-        />
-      ) : (
-        <>
-          {/* Desktop table */}
-          <div className="hidden overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800 md:block">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] text-left text-sm">
-                <thead className="border-b border-slate-200 bg-nexa-light/50 text-xs uppercase tracking-wide text-nexa-navy/70 dark:border-slate-700 dark:bg-slate-700/40 dark:text-slate-300">
-                  <tr>
-                    <th className="px-4 py-2 font-medium">Nombre</th>
-                    <th className="px-4 py-2 font-medium">Área</th>
-                    <th className="px-4 py-2 font-medium">Cargo</th>
-                    <th className="px-4 py-2 font-medium">Proyectos</th>
-                    <th className="px-4 py-2 font-medium">Ingreso</th>
-                    <th className="px-4 py-2 font-medium">Estado</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                  {(members as TeamMember[] | null)?.map((m) => (
-                    <tr
-                      key={m.id}
-                      className="transition-colors hover:bg-nexa-light/30 dark:hover:bg-slate-700/40"
-                    >
-                      <td className="px-4 py-2.5">
-                        <Link
-                          href={`/members/${m.id}`}
-                          className="font-medium text-slate-800 hover:text-nexa-blue hover:underline dark:text-slate-100"
-                        >
-                          {m.full_name}
-                        </Link>
-                        {m.profile_id && roleByProfileId.get(m.profile_id) === "lider" && (
-                          <span
-                            title="Líder"
-                            className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
-                          >
-                            Líder
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">
-                        {m.area ?? m.career ?? "—"}
-                      </td>
-                      <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">
-                        {m.position ?? "—"}
-                      </td>
-                      <td className="px-4 py-2.5">
-                        {(projectsByMember.get(m.id) ?? []).length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
-                            {projectsByMember.get(m.id)!.map((code) => (
-                              <span
-                                key={code}
-                                className="rounded bg-nexa-light px-1.5 py-0.5 text-xs font-medium text-nexa-blue dark:bg-blue-950/40 dark:text-blue-300"
-                              >
-                                {code}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">
-                        {m.join_date ?? "—"}
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <StatusBadge status={m.status} label={STATUS_LABELS[m.status]} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Mobile cards */}
-          <div className="space-y-2 md:hidden">
-            {(members as TeamMember[] | null)?.map((m) => (
-              <Link
-                key={m.id}
-                href={`/members/${m.id}`}
-                className="block rounded-lg border border-slate-200 bg-white p-4 shadow-sm active:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:active:bg-slate-700/40"
-              >
-                <div className="mb-1 flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-medium text-slate-800 dark:text-slate-100">
-                      {m.full_name}
-                      {m.profile_id && roleByProfileId.get(m.profile_id) === "lider" && (
-                        <span className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-                          Líder
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {m.position ?? "Sin cargo"}
-                    </p>
-                  </div>
-                  <StatusBadge status={m.status} label={STATUS_LABELS[m.status]} />
-                </div>
-                <p className="mb-2 text-xs text-slate-500 dark:text-slate-400">
-                  {m.area ?? m.career ?? "Sin área"}
-                </p>
-                {(projectsByMember.get(m.id) ?? []).length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {projectsByMember.get(m.id)!.map((code) => (
-                      <span
-                        key={code}
-                        className="rounded bg-nexa-light px-1.5 py-0.5 text-xs font-medium text-nexa-blue dark:bg-blue-950/40 dark:text-blue-300"
-                      >
-                        {code}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </Link>
-            ))}
-          </div>
-        </>
-      )}
+      <ul className="flex flex-wrap gap-1.5 lg:max-w-[55%] lg:justify-end">
+        {profiles.map((p) => (
+          <li key={p.id}>
+            <Link
+              href={`/members/new?full_name=${encodeURIComponent(p.full_name ?? "")}&email=${encodeURIComponent(p.email)}`}
+              title={p.email}
+              className="inline-flex items-center gap-1 rounded-full border border-nexa-blue/30 bg-white px-2.5 py-1 text-xs font-medium text-nexa-blue transition-colors hover:bg-nexa-blue hover:text-white dark:border-blue-800 dark:bg-slate-800 dark:text-blue-300 dark:hover:bg-blue-900"
+            >
+              <PlusIcon className="h-3 w-3" />
+              {p.full_name ?? p.email}
+            </Link>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

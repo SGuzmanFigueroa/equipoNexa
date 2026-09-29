@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin, requireAdminOrLeader } from "@/lib/auth";
 import { decodeSlot } from "@/lib/types";
+import { calcularFechaFin } from "@/lib/practice-dates";
 
 // The profile page now splits the old one-big-form into several small
 // forms (one per tab), each posting to this same action. Only fields that
@@ -35,7 +36,7 @@ const TEXT_FIELDS = [
 ] as const;
 
 export async function updateMember(memberId: string, formData: FormData) {
-  await requireAdminOrLeader();
+  const { isAdmin } = await requireAdminOrLeader();
   const supabase = await createClient();
 
   const updates: Record<string, string | number | null> = {};
@@ -54,6 +55,22 @@ export async function updateMember(memberId: string, formData: FormData) {
   }
   // full_name is required at the DB level — never send an empty string.
   if ("full_name" in updates && !updates.full_name) delete updates.full_name;
+
+  // La fecha de salida de prácticas nunca se toma tal cual del formulario:
+  // se recalcula desde la fecha de ingreso. Un líder no puede cambiar
+  // join_date (el trigger lo revierte), así que para él se usa la guardada.
+  if ("end_date" in updates || "join_date" in updates) {
+    let joinDate = isAdmin && "join_date" in updates ? (updates.join_date as string | null) : undefined;
+    if (joinDate === undefined) {
+      const { data: current } = await supabase
+        .from("team_members")
+        .select("join_date")
+        .eq("id", memberId)
+        .single();
+      joinDate = current?.join_date ?? null;
+    }
+    updates.end_date = calcularFechaFin(joinDate);
+  }
 
   if (Object.keys(updates).length > 0) {
     const { error } = await supabase.from("team_members").update(updates).eq("id", memberId);

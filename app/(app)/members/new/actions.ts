@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdminOrLeader } from "@/lib/auth";
+import { calcularFechaFin } from "@/lib/practice-dates";
 
 export async function createMember(formData: FormData) {
   const { profile } = await requireAdminOrLeader();
@@ -26,8 +27,17 @@ export async function createMember(formData: FormData) {
   const notes = String(formData.get("notes") ?? "").trim();
   const projectIds = formData.getAll("project_ids").map(String).filter(Boolean);
 
-  if (!fullName) {
-    redirect(`/members/new?error=${encodeURIComponent("Completa al menos el nombre.")}`);
+  const missing = [
+    !fullName && "nombres completos",
+    !email && "correo",
+    !phone && "teléfono",
+    !area && "área en Nexa",
+    !joinDate && "fecha de ingreso",
+  ].filter(Boolean);
+  if (missing.length > 0) {
+    redirect(
+      `/members/new?error=${encodeURIComponent(`Completa los campos obligatorios: ${missing.join(", ")}.`)}`,
+    );
   }
 
   const { data, error } = await supabase
@@ -47,6 +57,8 @@ export async function createMember(formData: FormData) {
       position: position || null,
       collaboration_type: collaborationType || null,
       join_date: joinDate || null,
+      // Siempre recalculada aquí (nunca se confía en lo que mande el form).
+      end_date: calcularFechaFin(joinDate),
       status,
       notes: notes || null,
       created_by: profile.id,
