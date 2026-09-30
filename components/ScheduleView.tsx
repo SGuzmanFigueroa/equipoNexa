@@ -5,6 +5,7 @@ import Link from "next/link";
 import InitialsAvatar from "./Avatar";
 import EmptyState from "./EmptyState";
 import Modal from "./Modal";
+import ProjectBestSlots from "./ProjectBestSlots";
 import {
   AVAILABILITY_LABELS,
   DAY_LABELS,
@@ -157,15 +158,18 @@ export default function ScheduleView({
   }, [selectedConfiguredIds, byMemberSlot, membersById]);
 
   const bestSlots = useMemo(() => {
-    const entries: { key: string; day: number; hour: number; libre: number }[] = [];
+    const entries: { key: string; day: number; hour: number; libre: number; tentativo: number }[] = [];
     for (let day = 0; day < 7; day++) {
       for (const hour of HOURS) {
         const key = slotKey(day, hour);
         const libre = slotStats.get(key)?.libre ?? 0;
-        if (libre > 0) entries.push({ key, day, hour, libre });
+        const tentativo = slotStats.get(key)?.tentativo ?? 0;
+        if (libre > 0) entries.push({ key, day, hour, libre, tentativo });
       }
     }
-    entries.sort((a, b) => b.libre - a.libre || a.day - b.day || a.hour - b.hour);
+    // Mismo criterio que "Mejores momentos por proyecto": a igual número de
+    // disponibles, gana la franja con más "tal vez".
+    entries.sort((a, b) => b.libre - a.libre || b.tentativo - a.tentativo || a.day - b.day || a.hour - b.hour);
     return entries.slice(0, 3);
   }, [slotStats]);
 
@@ -232,8 +236,23 @@ export default function ScheduleView({
         </div>
       )}
 
+      <ProjectBestSlots
+        members={members}
+        projects={projects}
+        byMemberSlot={byMemberSlot}
+        onFocusProject={(ids) => {
+          // Selecciona al equipo del proyecto y muestra su disponibilidad completa.
+          setSelected(new Set(ids));
+          setMatrixExpanded(true);
+          setOpenCell(null);
+          requestAnimationFrame(() =>
+            document.getElementById("equipo-seleccionado")?.scrollIntoView({ behavior: "smooth", block: "start" }),
+          );
+        }}
+      />
+
       {/* Team selector */}
-      <div className="mb-5 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+      <div id="equipo-seleccionado" className="mb-5 scroll-mt-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
         <div className="mb-3 flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold text-nexa-navy dark:text-white">
             Equipo seleccionado
