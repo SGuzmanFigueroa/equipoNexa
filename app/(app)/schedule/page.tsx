@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import ScheduleView from "@/components/ScheduleView";
 import type { AvailabilityStatus, MemberStatus } from "@/lib/types";
 
@@ -11,10 +12,19 @@ export default async function SchedulePage() {
   await requireAdmin();
   const supabase = await createClient();
 
-  const [{ data: members }, { data: availabilityRows }, { data: memberProjects }, { data: projects }] =
+  const [{ data: members }, availabilityRows, { data: memberProjects }, { data: projects }] =
     await Promise.all([
       supabase.from("team_members").select("id, full_name, status").order("full_name"),
-      supabase.from("team_member_availability").select("member_id, day_of_week, hour, status"),
+      // Pasa de 1000 filas (tope de Supabase por consulta): se lee por páginas.
+      fetchAll((from, to) =>
+        supabase
+          .from("team_member_availability")
+          .select("member_id, day_of_week, hour, status")
+          .order("member_id")
+          .order("day_of_week")
+          .order("hour")
+          .range(from, to),
+      ),
       supabase.from("team_member_projects").select("member_id, project:projects(code)"),
       supabase.from("projects").select("code, name").order("name"),
     ]);
