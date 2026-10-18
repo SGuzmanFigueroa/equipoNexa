@@ -128,3 +128,17 @@ export function calcularFechaFin(
   }
   return null;
 }
+
+// Fecha de hoy en Perú ("YYYY-MM-DD"), sin importar la zona horaria del
+// servidor (Netlify corre en UTC y de noche ya sería "mañana").
+export function hoyEnPeru(now = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(now);
+}
+
+// Días de calendario de `desde` a `hasta` (negativo si `hasta` ya pasó).
+export function diasEntre(desde: string, hasta: string): number | null {
+  const a = parseISODate(desde);
+  const b = parseISODate(hasta);
+  if (!a || !b) return null;
+  return Math.round((b.getTime() - a.getTime()) / 86_400_000);
+}

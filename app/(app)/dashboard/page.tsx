@@ -7,6 +7,11 @@ import type { MemberStatus, Profile } from "@/lib/types";
 import type { DirectoryMember, DirectoryProject } from "@/lib/member-filters";
 import MembersDirectory from "./_components/MembersDirectory";
 import { DownloadIcon, InfoIcon, PlusIcon } from "./_components/icons";
+import LeavingSoonNotice, { type LeavingMember } from "./_components/LeavingSoonNotice";
+import { calcularFechaFin, diasEntre, hoyEnPeru } from "@/lib/practice-dates";
+
+// Cuántos días antes de la fecha de salida empieza a avisarse al admin.
+const LEAVING_WINDOW_DAYS = 30;
 
 export default async function DashboardPage({
   searchParams,
@@ -27,7 +32,7 @@ export default async function DashboardPage({
   ] = await Promise.all([
     supabase
       .from("team_members")
-      .select("id, full_name, email, area, career, position, join_date, status, profile_id"),
+      .select("id, full_name, email, area, career, position, join_date, end_date, status, profile_id"),
     supabase.from("profiles").select("id, email, full_name, role, created_at"),
     supabase.from("team_member_projects").select("member_id, project_id"),
     supabase.from("projects").select("id, name, code").order("code"),
@@ -63,6 +68,22 @@ export default async function DashboardPage({
     (p) => !memberEmails.has(p.email.toLowerCase()),
   );
 
+  // La fecha de salida sale de join_date con la misma regla que la carta
+  // (320 h); end_date guardado queda solo de respaldo si no hay join_date.
+  const today = hoyEnPeru();
+  const leaving: LeavingMember[] = isAdmin
+    ? (memberRows ?? [])
+        .filter((m) => m.status === "activo")
+        .flatMap((m) => {
+          const end = calcularFechaFin(m.join_date) ?? m.end_date;
+          const days = end ? diasEntre(today, end) : null;
+          return end && days !== null && days <= LEAVING_WINDOW_DAYS
+            ? [{ id: m.id, full_name: m.full_name, end_date: end, days }]
+            : [];
+        })
+        .sort((a, b) => a.days - b.days)
+    : [];
+
   return (
     <div className="space-y-6">
       <FlashToast success={success} />
@@ -93,6 +114,8 @@ export default async function DashboardPage({
       </div>
 
       {error && <Alert variant="danger">Error cargando integrantes: {error.message}</Alert>}
+
+      {leaving.length > 0 && <LeavingSoonNotice members={leaving} windowDays={LEAVING_WINDOW_DAYS} />}
 
       <MembersDirectory
         members={members}
