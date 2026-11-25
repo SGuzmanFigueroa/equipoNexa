@@ -81,15 +81,18 @@ export interface CertificatePayload {
   fechaEmision: string;
 }
 
+// Datos de la pestaña Nexa de la ficha: nombre, DNI, fecha de ingreso y
+// fecha de salida (si no está guardada, se calcula con la regla de 320 h).
 export function buildCertificate(member: {
   full_name: string | null;
   dni: string | null;
   join_date: string | null;
+  end_date?: string | null;
 }): { payload: CertificatePayload | null; missing: string[] } {
   const nombre = member.full_name?.trim() || null;
   const dni = member.dni?.trim() || null;
   const inicio = member.join_date?.trim() || null;
-  const fin = calcularFechaFin(inicio);
+  const fin = member.end_date?.trim() || calcularFechaFin(inicio);
 
   const missing = [
     !nombre && "nombre completo",

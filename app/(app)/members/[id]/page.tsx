@@ -12,6 +12,7 @@ import Tabs from "@/components/Tabs";
 import ReadEditToggle from "@/components/ReadEditToggle";
 import PracticeDateFields from "@/components/PracticeDateFields";
 import { GenerateLetterButton } from "@/components/GenerateLetterDialog";
+import GenerateCertificateButton from "@/components/GenerateCertificateButton";
 import { updateMember, deleteMember, addTrackingEntry, saveAvailability } from "./actions";
 import {
   CAREER_OPTIONS,
@@ -455,6 +456,7 @@ export default async function MemberDetailPage({
           <div className="flex flex-wrap items-center gap-3">
             <StatusBadge status={m.status} label={STATUS_LABELS[m.status]} />
             {isAdmin && <GenerateLetterButton memberId={m.id} />}
+            {isAdmin && <GenerateCertificateButton memberId={m.id} />}
           </div>
         </div>
 

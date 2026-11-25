@@ -11,7 +11,7 @@ export async function getRetiredMember() {
   const supabase = await createClient();
   const { data: member } = await supabase
     .from("team_members")
-    .select("id, full_name, dni, email, area, position, join_date, status")
+    .select("id, full_name, dni, email, area, position, join_date, end_date, status")
     .eq("profile_id", profile.id)
     .maybeSingle();
   if (!member) return { error: fail(404, "Tu cuenta no está vinculada a una ficha de integrante.") };

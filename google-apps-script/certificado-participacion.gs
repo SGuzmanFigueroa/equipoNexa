@@ -8,9 +8,11 @@
  *   - estado:      ¿este integrante ya respondió la encuesta?
  *   - responder:   guarda sus respuestas como una fila en el Google Sheet
  *                  "Encuestas de salida - Equipo Nexa" (lo crea solo).
- *   - certificado: si ya respondió, rellena la plantilla, devuelve el PDF y
- *                  anota en el Sheet la fecha de descarga. No deja archivos
- *                  nuevos en el Drive (la copia temporal va a la papelera).
+ *   - certificado: rellena la plantilla y devuelve el PDF. Desde el botón
+ *                  "Generar certificado" del admin sale directo; si lo pide
+ *                  el integrante, solo si ya respondió (y se anota la fecha
+ *                  de descarga). No deja archivos nuevos en el Drive (la
+ *                  copia temporal va a la papelera).
  *
  * Instalación (con esa cuenta):
  *   1. script.google.com → Nuevo proyecto → pega este archivo.
@@ -110,16 +112,20 @@ function responder_(d) {
   }
 }
 
+// sinEncuesta = lo pide el admin desde la ficha: se genera directo, sin
+// exigir la encuesta. Si lo pide el integrante, debe haberla respondido.
 function certificado_(d) {
   const row = findRow_(d.memberId);
-  if (row < 0) return { success: false, error: 'Primero responde la encuesta de salida.' };
+  if (row < 0 && d.sinEncuesta !== true) return { success: false, error: 'Primero responde la encuesta de salida.' };
   for (const key of Object.values(CERT_FIELDS)) {
     if (!d[key] || typeof d[key] !== 'string') return { success: false, error: 'Falta el dato: ' + key };
   }
   const nombreArchivo = 'Certificado de participación - ' + d.nombreCompleto + '.pdf';
   const pdf = buildPdf_(d, nombreArchivo);
-  const cell = sheet_().getRange(row, COL_CERT);
-  if (!cell.getValue()) cell.setValue(new Date());
+  if (row > 0 && d.sinEncuesta !== true) {
+    const cell = sheet_().getRange(row, COL_CERT);
+    if (!cell.getValue()) cell.setValue(new Date());
+  }
   return { success: true, nombreArchivo: nombreArchivo, pdfBase64: Utilities.base64Encode(pdf.getBytes()) };
 }
 
