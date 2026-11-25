@@ -12,7 +12,16 @@ import Tabs from "@/components/Tabs";
 import ReadEditToggle from "@/components/ReadEditToggle";
 import PracticeDateFields from "@/components/PracticeDateFields";
 import { GenerateLetterButton } from "@/components/GenerateLetterDialog";
-import { updateMember, deleteMember, addTrackingEntry, saveAvailability } from "./actions";
+import OffboardingAdminPanel from "@/components/OffboardingAdminPanel";
+import { OFFBOARDING_COLUMNS, type Offboarding } from "@/lib/offboarding";
+import {
+  updateMember,
+  deleteMember,
+  addTrackingEntry,
+  saveAvailability,
+  activateOffboarding,
+  deactivateOffboarding,
+} from "./actions";
 import {
   CAREER_OPTIONS,
   DNI_INPUT_PROPS,
@@ -62,6 +71,7 @@ export default async function MemberDetailPage({
     { data: memberProjects },
     { data: availability },
     { data: allProfiles },
+    { data: offboarding },
   ] = await Promise.all([
     supabase.from("team_members").select("*").eq("id", id).single(),
     supabase
@@ -74,6 +84,10 @@ export default async function MemberDetailPage({
     supabase.from("team_member_projects").select("project_id").eq("member_id", id),
     supabase.from("team_member_availability").select("day_of_week, hour, status").eq("member_id", id),
     supabase.from("profiles").select("id, email, full_name, role").order("email"),
+    // Solo el admin ve/gestiona la salida (RLS: nadie más lee esta tabla).
+    isAdmin
+      ? supabase.from("member_offboarding").select(OFFBOARDING_COLUMNS).eq("member_id", id).maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
 
   if (!member) notFound();
@@ -91,6 +105,8 @@ export default async function MemberDetailPage({
   const deleteWithId = deleteMember.bind(null, id);
   const addTrackingWithId = addTrackingEntry.bind(null, id);
   const saveAvailabilityWithId = saveAvailability.bind(null, id);
+  const activateOffboardingWithId = activateOffboarding.bind(null, id);
+  const deactivateOffboardingWithId = deactivateOffboarding.bind(null, id);
 
   const informacionTab = (
     <ReadEditToggle
@@ -480,6 +496,16 @@ export default async function MemberDetailPage({
           </div>
         )}
       </div>
+
+      {isAdmin && (
+        <OffboardingAdminPanel
+          memberName={m.full_name}
+          hasLogin={!!m.profile_id}
+          offboarding={(offboarding as Offboarding | null) ?? null}
+          activateAction={activateOffboardingWithId}
+          deactivateAction={deactivateOffboardingWithId}
+        />
+      )}
 
       <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
         <Tabs
