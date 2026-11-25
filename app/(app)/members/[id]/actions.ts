@@ -107,33 +107,6 @@ export async function deleteMember(memberId: string) {
   redirect(`/dashboard?success=${encodeURIComponent("Integrante eliminado.")}`);
 }
 
-// Salida (offboarding): al activarla, el integrante ve la pantalla de
-// agradecimiento + encuesta de salida en lugar de la app cuando entra.
-export async function activateOffboarding(memberId: string) {
-  const profile = await requireAdmin();
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("member_offboarding")
-    .upsert({ member_id: memberId, activated_by: profile.id }, { onConflict: "member_id", ignoreDuplicates: true });
-  if (error) {
-    redirect(`/members/${memberId}?error=${encodeURIComponent(friendlyDbError(error))}`);
-  }
-  redirect(
-    `/members/${memberId}?success=${encodeURIComponent("Salida activada: verá la encuesta y su certificado al entrar.")}`,
-  );
-}
-
-// Desactivar borra la fila (y las respuestas, si las hubiera).
-export async function deactivateOffboarding(memberId: string) {
-  await requireAdmin();
-  const supabase = await createClient();
-  const { error } = await supabase.from("member_offboarding").delete().eq("member_id", memberId);
-  if (error) {
-    redirect(`/members/${memberId}?error=${encodeURIComponent(friendlyDbError(error))}`);
-  }
-  redirect(`/members/${memberId}?success=${encodeURIComponent("Salida desactivada.")}`);
-}
-
 export async function addTrackingEntry(memberId: string, formData: FormData) {
   const { profile } = await requireAdminOrLeader();
   const supabase = await createClient();

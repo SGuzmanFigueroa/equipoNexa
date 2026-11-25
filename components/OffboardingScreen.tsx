@@ -1,8 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
-import SubmitButton from "@/components/SubmitButton";
-import { submitOffboarding, type OffboardingFormState } from "@/app/(app)/me/offboarding-actions";
+import { useEffect, useRef, useState } from "react";
 import { OFFBOARDING_TEXT_QUESTIONS, RECOMMENDS_LABELS, ratingLabel, type Recommends } from "@/lib/offboarding";
 
 // Lo único que ve un integrante cuando el admin activó su salida: un
@@ -36,7 +34,7 @@ function RatingScale() {
           <label key={n} className="cursor-pointer">
             <input
               type="radio"
-              name="environment_rating"
+              name="ambiente"
               value={n}
               required
               className="peer sr-only"
@@ -57,10 +55,36 @@ function RatingScale() {
   );
 }
 
-function Survey({ formAction, error }: { formAction: (fd: FormData) => void; error?: string }) {
+function Survey({ onDone }: { onDone: () => void }) {
   const [recommends, setRecommends] = useState<Recommends | null>(null);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (sending) return;
+    const fd = new FormData(e.currentTarget);
+    const body: Record<string, string> = {};
+    fd.forEach((v, k) => (body[k] = String(v)));
+    setSending(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/salida", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) throw new Error(data?.error ?? "No pudimos enviar tus respuestas. Inténtalo nuevamente.");
+      onDone();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No pudimos enviar tus respuestas.");
+      setSending(false);
+    }
+  };
+
   return (
-    <form action={formAction} className="space-y-6">
+    <form onSubmit={submit} className="space-y-6">
       {error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
           {error}
@@ -86,7 +110,7 @@ function Survey({ formAction, error }: { formAction: (fd: FormData) => void; err
         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
           {(Object.keys(RECOMMENDS_LABELS) as Recommends[]).map((r) => (
             <label key={r} className="cursor-pointer">
-              <input type="radio" name="recommends" value={r} required className="peer sr-only" onChange={() => setRecommends(r)} />
+              <input type="radio" name="recomienda" value={r} required className="peer sr-only" onChange={() => setRecommends(r)} />
               <span className="flex h-11 items-center justify-center rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-600 transition-colors peer-checked:border-nexa-blue peer-checked:bg-nexa-light peer-checked:text-nexa-blue peer-focus-visible:ring-2 peer-focus-visible:ring-nexa-blue/40 hover:border-nexa-blue/50 dark:border-slate-700 dark:text-slate-300 dark:peer-checked:bg-blue-950/50 dark:peer-checked:text-blue-200">
                 {RECOMMENDS_LABELS[r]}
               </span>
@@ -95,18 +119,28 @@ function Survey({ formAction, error }: { formAction: (fd: FormData) => void; err
         </div>
         {recommends && (
           <div className="mt-3">
-            <label htmlFor="ob-recommend_reason" className="text-xs font-medium text-slate-500 dark:text-slate-400">
+            <label htmlFor="ob-porque" className="text-xs font-medium text-slate-500 dark:text-slate-400">
               ¿Por qué? (opcional)
             </label>
-            <textarea id="ob-recommend_reason" name="recommend_reason" rows={2} maxLength={4000} className={`${TEXTAREA} mt-1`} />
+            <textarea id="ob-porque" name="porque" rows={2} maxLength={4000} className={`${TEXTAREA} mt-1`} />
           </div>
         )}
       </fieldset>
 
       <div className="flex justify-end border-t border-slate-100 pt-5 dark:border-slate-700">
-        <SubmitButton pendingLabel="Enviando..." className="h-11 w-full rounded-lg px-6 text-sm font-semibold sm:w-auto">
-          Enviar respuestas
-        </SubmitButton>
+        <button
+          type="submit"
+          disabled={sending}
+          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-nexa-blue px-6 text-sm font-semibold text-white shadow-sm shadow-nexa-blue/30 transition-colors hover:bg-nexa-navy disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+        >
+          {sending ? (
+            <>
+              <Spinner /> Enviando…
+            </>
+          ) : (
+            "Enviar respuestas"
+          )}
+        </button>
       </div>
     </form>
   );
@@ -189,9 +223,25 @@ function CertificateDownload() {
   );
 }
 
-export default function OffboardingScreen({ firstName, submitted }: { firstName: string; submitted: boolean }) {
-  const [state, formAction] = useActionState<OffboardingFormState, FormData>(submitOffboarding, null);
-  const done = submitted || state?.ok;
+export default function OffboardingScreen({ firstName }: { firstName: string }) {
+  // null = consultando si ya respondió la encuesta.
+  const [done, setDone] = useState<boolean | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/salida", { cache: "no-store" })
+      .then(async (res) => {
+        const data = await res.json().catch(() => null);
+        if (cancelled) return;
+        if (res.ok && data?.ok) setDone(data.respondido === true);
+        else setLoadError(data?.error ?? "No pudimos cargar la encuesta. Recarga la página.");
+      })
+      .catch(() => !cancelled && setLoadError("No hay conexión con el servidor. Recarga la página."));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -206,7 +256,19 @@ export default function OffboardingScreen({ firstName, submitted }: { firstName:
           </p>
         </div>
         <div className="px-6 py-8 sm:px-10">
-          {done ? <CertificateDownload /> : <Survey formAction={formAction} error={state?.error} />}
+          {loadError ? (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-center text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
+              {loadError}
+            </p>
+          ) : done === null ? (
+            <div className="flex items-center justify-center gap-2 py-10 text-sm text-slate-500 dark:text-slate-400">
+              <Spinner /> Cargando…
+            </div>
+          ) : done ? (
+            <CertificateDownload />
+          ) : (
+            <Survey onDone={() => setDone(true)} />
+          )}
         </div>
       </div>
     </div>

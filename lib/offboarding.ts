@@ -1,5 +1,8 @@
-// Salida (offboarding) de un integrante: encuesta + certificado de
-// participación. Tabla member_offboarding (migración 0013).
+// Salida (offboarding) de un integrante: cuando su estado es "retirado", al
+// entrar solo ve el agradecimiento + encuesta de salida + certificado.
+// Respuestas y PDF los maneja un Apps Script en la cuenta de Google dueña
+// de la plantilla (google-apps-script/certificado-participacion.gs): las
+// respuestas quedan en un Google Sheet, no en Supabase.
 import { calcularFechaFin } from "@/lib/practice-dates";
 import { isValidDni } from "@/lib/types";
 
@@ -11,46 +14,29 @@ export const RECOMMENDS_LABELS: Record<Recommends, string> = {
   no: "No la recomendaría",
 };
 
-export interface Offboarding {
-  member_id: string;
-  activated_at: string;
-  activated_by: string | null;
-  submitted_at: string | null;
-  environment_rating: number | null;
-  learned: string | null;
-  expectations: string | null;
-  career_goal: string | null;
-  recommends: Recommends | null;
-  recommend_reason: string | null;
-  improvements: string | null;
-  certificate_downloaded_at: string | null;
-}
-
-export const OFFBOARDING_COLUMNS =
-  "member_id, activated_at, activated_by, submitted_at, environment_rating, learned, expectations, career_goal, recommends, recommend_reason, improvements, certificate_downloaded_at";
-
 // Preguntas de texto de la encuesta, en el orden en que se muestran.
+// `key` es el nombre del campo que recibe el Apps Script.
 export const OFFBOARDING_TEXT_QUESTIONS = [
   {
-    name: "learned",
+    name: "aprendio",
     label: "¿Qué aprendiste durante tus prácticas en Nexa?",
     hint: "Herramientas, habilidades, metodologías, lo que más te sirvió.",
     required: true,
   },
   {
-    name: "expectations",
+    name: "espera",
     label: "¿Qué esperas luego de tus prácticas?",
     hint: "Tus próximos pasos: trabajo, especialización, estudios…",
     required: true,
   },
   {
-    name: "career_goal",
+    name: "meta",
     label: "¿A dónde quieres llegar profesionalmente?",
     hint: "El rol, empresa o meta que te gustaría alcanzar.",
     required: true,
   },
   {
-    name: "improvements",
+    name: "mejoras",
     label: "¿Qué podríamos mejorar en Nexa?",
     hint: "Opcional. Cualquier sugerencia nos ayuda.",
     required: false,
@@ -83,7 +69,6 @@ export function formatDateLong(iso: string | null | undefined) {
 }
 
 function todayInLima() {
-  // en-CA da AAAA-MM-DD.
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(new Date());
 }
 
@@ -127,16 +112,26 @@ export function buildCertificate(member: {
   };
 }
 
-export type CertificateResult =
-  | { ok: true; pdf: Buffer; nombreArchivo: string }
+// ---------- Llamada al Apps Script ----------
+
+export type ScriptResult =
+  | { ok: true; data: Record<string, unknown> }
   | { ok: false; status: number; error: string };
 
-// Llama al Web App de Apps Script del certificado (en la cuenta de Google
-// dueña de la plantilla) y devuelve el PDF. La URL vive solo en el servidor.
-export async function generateCertificatePdf(
-  payload: CertificatePayload,
-  { url, token, timeoutMs }: { url: string; token?: string; timeoutMs: number },
-): Promise<CertificateResult> {
+const TIMEOUT_MS = Number(process.env.GOOGLE_SALIDA_SCRIPT_TIMEOUT_MS) || 9500;
+
+// Solo en el servidor: la URL y el token nunca llegan al navegador.
+export async function callSalidaScript(
+  action: "estado" | "responder" | "certificado",
+  body: Record<string, unknown>,
+): Promise<ScriptResult> {
+  const url = process.env.GOOGLE_SALIDA_SCRIPT_URL;
+  if (!url) {
+    console.error("[salida] falta la variable GOOGLE_SALIDA_SCRIPT_URL");
+    return { ok: false, status: 503, error: "La encuesta de salida todavía no está configurada. Avisa a un administrador." };
+  }
+  const token = process.env.GOOGLE_SALIDA_SCRIPT_TOKEN;
+
   let res: Response;
   try {
     res = await fetch(url, {
@@ -144,18 +139,18 @@ export async function generateCertificatePdf(
       headers: { "Content-Type": "application/json" },
       redirect: "follow",
       cache: "no-store",
-      signal: AbortSignal.timeout(timeoutMs),
-      body: JSON.stringify(token ? { ...payload, token } : payload),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      body: JSON.stringify({ ...body, action, ...(token ? { token } : {}) }),
     });
   } catch (err) {
     const timedOut = err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
-    console.error("[certificado] Apps Script no respondió", { timedOut });
+    console.error("[salida] Apps Script no respondió", { action, timedOut });
     return {
       ok: false,
       status: 504,
       error: timedOut
-        ? "La generación del certificado tardó demasiado. Inténtalo de nuevo en unos segundos."
-        : "No pudimos comunicarnos con Google Docs. Inténtalo nuevamente.",
+        ? "Google tardó demasiado en responder. Inténtalo de nuevo en unos segundos."
+        : "No pudimos comunicarnos con Google. Inténtalo nuevamente.",
     };
   }
 
@@ -167,23 +162,14 @@ export async function generateCertificatePdf(
   } catch {
     json = null;
   }
-
   if (!res.ok || !json) {
-    console.error("[certificado] respuesta inesperada de Apps Script", { status: res.status });
-    return { ok: false, status: 502, error: "Google Docs no respondió correctamente. Inténtalo nuevamente." };
+    console.error("[salida] respuesta inesperada de Apps Script", { action, status: res.status });
+    return { ok: false, status: 502, error: "Google no respondió correctamente. Inténtalo nuevamente." };
   }
-  if (json.success !== true || typeof json.pdfBase64 !== "string" || !json.pdfBase64) {
+  if (json.success !== true) {
     const reason = typeof json.error === "string" ? json.error : null;
-    console.error("[certificado] Apps Script devolvió error", { reason });
-    return { ok: false, status: 502, error: "No pudimos generar tu certificado. Inténtalo nuevamente." };
+    console.error("[salida] Apps Script devolvió error", { action, reason });
+    return { ok: false, status: 502, error: reason ?? "Algo falló en Google. Inténtalo nuevamente." };
   }
-
-  return {
-    ok: true,
-    pdf: Buffer.from(json.pdfBase64, "base64"),
-    nombreArchivo:
-      typeof json.nombreArchivo === "string" && json.nombreArchivo
-        ? json.nombreArchivo
-        : `Certificado de participación - ${payload.nombreCompleto}.pdf`,
-  };
+  return { ok: true, data: json };
 }

@@ -14,16 +14,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const supabase = await createClient();
   const { data: member } = await supabase
     .from("team_members")
-    .select("id, full_name, dni, phone, career, university, position, linkedin_url, skills, area, join_date")
+    .select("full_name, dni, phone, career, university, position, linkedin_url, skills, area, join_date, status")
     .eq("profile_id", profile.id)
     .maybeSingle();
 
-  // Salida activada por el admin: en lugar de la app, solo el
-  // agradecimiento + encuesta + certificado (nunca para un admin).
-  const { data: offboarding } =
-    member && profile.role !== "admin"
-      ? await supabase.from("member_offboarding").select("submitted_at").eq("member_id", member.id).maybeSingle()
-      : { data: null };
+  // Integrante en estado "Retirado": en lugar de la app, solo el
+  // agradecimiento + encuesta de salida + certificado (nunca para un admin).
+  const offboarding = member?.status === "retirado" && profile.role !== "admin";
 
   const missing = member && !offboarding ? missingProfileKeys(member) : [];
 
@@ -32,10 +29,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Header profile={profile} isLeader={isLeader} />
       <main className="mx-auto max-w-[1400px] px-4 py-6 md:px-8 md:py-8">
         {offboarding ? (
-          <OffboardingScreen
-            firstName={(member?.full_name ?? "").trim().split(/\s+/)[0] ?? ""}
-            submitted={!!offboarding.submitted_at}
-          />
+          <OffboardingScreen firstName={(member?.full_name ?? "").trim().split(/\s+/)[0] ?? ""} />
         ) : (
           <>
             {missing.length > 0 && <PendingProfilePrompt key={missing.join(",")} missing={missing} />}
