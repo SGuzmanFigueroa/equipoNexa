@@ -107,6 +107,24 @@ export async function deleteMember(memberId: string) {
   redirect(`/dashboard?success=${encodeURIComponent("Integrante eliminado.")}`);
 }
 
+// "Generar certificado" en la ficha: activa la salida del integrante
+// (estado "retirado"). Desde ese momento, al entrar solo ve el
+// agradecimiento + encuesta de salida, y al responderla descarga su
+// certificado de participación.
+export async function activateOffboarding(memberId: string) {
+  await requireAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase.from("team_members").update({ status: "retirado" }).eq("id", memberId);
+  if (error) {
+    redirect(`/members/${memberId}?error=${encodeURIComponent(friendlyDbError(error))}`);
+  }
+  redirect(
+    `/members/${memberId}?success=${encodeURIComponent(
+      "Certificado habilitado: al entrar verá la encuesta de salida y luego podrá descargarlo.",
+    )}`,
+  );
+}
+
 export async function addTrackingEntry(memberId: string, formData: FormData) {
   const { profile } = await requireAdminOrLeader();
   const supabase = await createClient();

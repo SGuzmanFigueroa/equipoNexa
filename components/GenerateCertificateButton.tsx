@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useToast } from "@/components/Toast";
 
-// Botón de la ficha (solo admin): genera el certificado de participación
+// Botón de la ficha (solo admin, integrante ya retirado): descarga el certificado de participación
 // en PDF con los datos de la pestaña Nexa y lo descarga.
 export default function GenerateCertificateButton({ memberId }: { memberId: string }) {
   const [loading, setLoading] = useState(false);
@@ -62,7 +62,7 @@ export default function GenerateCertificateButton({ memberId }: { memberId: stri
           <path d="m8.5 13.8-1.5 7.2 5-3 5 3-1.5-7.2" />
         </svg>
       )}
-      {loading ? "Generando..." : "Generar certificado"}
+      {loading ? "Generando..." : "Descargar certificado"}
     </button>
   );
 }

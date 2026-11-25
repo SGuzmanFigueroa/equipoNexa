@@ -13,7 +13,7 @@ import ReadEditToggle from "@/components/ReadEditToggle";
 import PracticeDateFields from "@/components/PracticeDateFields";
 import { GenerateLetterButton } from "@/components/GenerateLetterDialog";
 import GenerateCertificateButton from "@/components/GenerateCertificateButton";
-import { updateMember, deleteMember, addTrackingEntry, saveAvailability } from "./actions";
+import { updateMember, deleteMember, addTrackingEntry, saveAvailability, activateOffboarding } from "./actions";
 import {
   CAREER_OPTIONS,
   DNI_INPUT_PROPS,
@@ -456,7 +456,23 @@ export default async function MemberDetailPage({
           <div className="flex flex-wrap items-center gap-3">
             <StatusBadge status={m.status} label={STATUS_LABELS[m.status]} />
             {isAdmin && <GenerateLetterButton memberId={m.id} />}
-            {isAdmin && <GenerateCertificateButton memberId={m.id} />}
+            {isAdmin &&
+              (m.status === "retirado" ? (
+                <GenerateCertificateButton memberId={m.id} />
+              ) : (
+                <form action={activateOffboarding.bind(null, m.id)}>
+                  <ConfirmSubmitButton
+                    confirmMessage={`¿Generar el certificado de ${m.full_name}?\n\nPasará a "Retirado": cuando entre a su cuenta ya no verá la app, solo la encuesta de salida, y al responderla podrá descargar su certificado.`}
+                    className="inline-flex h-9 items-center gap-2 rounded-lg border border-nexa-blue/30 bg-white px-3 text-sm font-medium text-nexa-blue transition-colors hover:bg-nexa-light dark:border-blue-800 dark:bg-slate-800 dark:text-blue-300 dark:hover:bg-blue-950/40"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="9" r="6" />
+                      <path d="m8.5 13.8-1.5 7.2 5-3 5 3-1.5-7.2" />
+                    </svg>
+                    Generar certificado
+                  </ConfirmSubmitButton>
+                </form>
+              ))}
           </div>
         </div>
 
